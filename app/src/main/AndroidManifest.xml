@@ -27,7 +27,7 @@
             <!-- The unique name/id of the Stage -->
             <meta-data
                 android:name="pico.spatial.stage.id"
-                android:value="YourStage" />
+                android:value="DefaultStage" />
 
             <!-- Stage style at launch
                  "0": StageStyle.Automatic, a system default setting, set to Mixed currently (default)

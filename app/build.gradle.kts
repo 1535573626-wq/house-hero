@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "com.roomhero.app"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.roomhero.app"
         minSdk = 35
-        targetSdk = 35
+        targetSdk = 37
         versionCode = 1
         versionName = "1.0"
 
@@ -42,8 +42,12 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.kotlinx.coroutines.android)
     implementation(platform(libs.spatial.bom))
     implementation(libs.spatial.core)
+    implementation(libs.spatial.foundation)
     implementation(libs.spatial.ui.platform)
     implementation(libs.spatial.ui.foundation)
     implementation(libs.spatial.ui.design)
