@@ -59,6 +59,31 @@
                 android:name="pico.spatial.stage.immersion_max"
                 android:value="100" />
 
+            <!-- DefaultWindowContainer Configuration -->
+            <meta-data
+                android:name="pico.spatial.windowcontainer.id"
+                android:value="MainHUD" />
+            <!-- WindowContainer form: 1 = Planar -->
+            <meta-data
+                android:name="pico.spatial.windowcontainer.style"
+                android:value="1" />
+            <!-- Default size in dp -->
+            <meta-data
+                android:name="pico.spatial.windowcontainer.defaultsize"
+                android:value="800x500" />
+            <!-- Resize type: 2 = ContentSize -->
+            <meta-data
+                android:name="pico.spatial.windowcontainer.resizetype"
+                android:value="2" />
+            <!-- World scale: 1 = Dynamic (keep legible at any distance) -->
+            <meta-data
+                android:name="pico.spatial.windowcontainer.worldscaletype"
+                android:value="1" />
+            <!-- Enable material background -->
+            <meta-data
+                android:name="pico.spatial.windowcontainer.materialbackground"
+                android:value="1" />
+
         </activity>
 
         <meta-data android:name="icon.3d.list" android:resource="@array/icon_3d_list" />
