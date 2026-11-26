@@ -6,43 +6,53 @@ import com.pico.spatial.core.ecs.TransformComponent
 import com.pico.spatial.core.ecs.resource.MeshResource
 import com.pico.spatial.core.ecs.resource.PhysicallyBasedMaterial
 import com.pico.spatial.core.math.Color4
+import com.pico.spatial.core.math.EulerAngles
 import com.pico.spatial.core.math.Quat
 import com.pico.spatial.core.math.Vector3
+import kotlin.random.Random
 
-private const val TILE_SIZE = 0.3f
-private const val TILE_SPACING = 0.05f
-private const val DIRT_HEIGHT_OFFSET = 0.01f
+private const val CONFETTI_WIDTH = 0.26f
+private const val CONFETTI_DEPTH = 0.08f
+private const val CONFETTI_SPACING = 0.06f
+private const val CONFETTI_HEIGHT_OFFSET = 0.008f
 
 /**
- * 管理地面上的“污渍”方格。
+ * 管理地面上的彩带纸屑。
  *
- * 污渍会锚定到 [FloorSurface]：若检测到真实地面则贴合真实地面，
+ * 彩带会锚定到 [FloorSurface]：若检测到真实地面则贴合真实地面，
  * 否则使用 fallback 虚拟地面，保证 Emulator 与无 Spatial Data 场景也能运行。
  */
 object DirtManager {
     val root: Entity = Entity()
 
-    private val dirtTiles = mutableListOf<Entity>()
+    private val confettiPieces = mutableListOf<Entity>()
     private var floorEntity: Entity? = null
 
-    private val dirtyMaterial by lazy {
-        PhysicallyBasedMaterial.create().apply {
-            setBaseColor(Color4(0.1f, 0.35f, 0.9f, 1.0f))
-            setOpacity(0.85f)
-        }
+    private val partyColors = listOf(
+        Color4(1.00f, 0.20f, 0.20f, 0.90f), // 红
+        Color4(1.00f, 0.75f, 0.10f, 0.90f), // 金
+        Color4(0.15f, 0.55f, 1.00f, 0.90f), // 蓝
+        Color4(0.20f, 0.85f, 0.30f, 0.90f), // 绿
+        Color4(0.80f, 0.20f, 1.00f, 0.90f), // 紫
+        Color4(1.00f, 0.50f, 0.10f, 0.90f), // 橙
+        Color4(1.00f, 0.35f, 0.70f, 0.90f), // 粉
+        Color4(0.10f, 0.90f, 1.00f, 0.90f), // 青
+    )
+
+    private val confettiMesh by lazy {
+        MeshResource.createPlane(CONFETTI_WIDTH, CONFETTI_DEPTH, 0f)
+            ?: MeshResource.createBox(Vector3(CONFETTI_WIDTH, 0.004f, CONFETTI_DEPTH), 0f)
     }
 
     /**
-     * 在 [surface] 上生成网格状污渍。
+     * 在 [surface] 上生成派对彩带。
      */
     fun spawnDirtGrid(surface: FloorSurface) {
         reset()
 
-        val mesh = MeshResource.createPlane(TILE_SIZE, TILE_SIZE, 0f)
-            ?: MeshResource.createBox(Vector3(TILE_SIZE, 0.005f, TILE_SIZE), 0f)
-            ?: return
+        val mesh = confettiMesh ?: return
 
-        // 以 surface 中心为父节点，污渍使用本地坐标，自动继承地面旋转
+        // 以 surface 中心为父节点，彩带使用本地坐标，自动继承地面旋转
         val parent = Entity().apply {
             components[TransformComponent::class.java]?.apply {
                 position = surface.position
@@ -54,43 +64,49 @@ object DirtManager {
 
         val width = surface.bounds.x
         val depth = surface.bounds.y
-        val tileCountX = ((width - TILE_SPACING) / (TILE_SIZE + TILE_SPACING)).toInt().coerceAtLeast(1)
-        val tileCountZ = ((depth - TILE_SPACING) / (TILE_SIZE + TILE_SPACING)).toInt().coerceAtLeast(1)
+        val countX = ((width - CONFETTI_SPACING) / (CONFETTI_WIDTH + CONFETTI_SPACING)).toInt().coerceAtLeast(1)
+        val countZ = ((depth - CONFETTI_SPACING) / (CONFETTI_DEPTH + CONFETTI_SPACING)).toInt().coerceAtLeast(1)
 
-        val offsetX = (tileCountX - 1) * (TILE_SIZE + TILE_SPACING) / 2f
-        val offsetZ = (tileCountZ - 1) * (TILE_SIZE + TILE_SPACING) / 2f
+        val offsetX = (countX - 1) * (CONFETTI_WIDTH + CONFETTI_SPACING) / 2f
+        val offsetZ = (countZ - 1) * (CONFETTI_DEPTH + CONFETTI_SPACING) / 2f
 
-        for (x in 0 until tileCountX) {
-            for (z in 0 until tileCountZ) {
+        val random = Random.Default
+        for (x in 0 until countX) {
+            for (z in 0 until countZ) {
+                val material = PhysicallyBasedMaterial.create().apply {
+                    setBaseColor(partyColors.random(random))
+                    setOpacity(0.88f)
+                }
                 val entity = Entity().apply {
-                    components.set(ModelComponent(mesh, dirtyMaterial))
+                    components.set(ModelComponent(mesh, material))
                 }
                 entity.components[TransformComponent::class.java]?.apply {
                     position = Vector3(
-                        x * (TILE_SIZE + TILE_SPACING) - offsetX,
-                        DIRT_HEIGHT_OFFSET,
-                        z * (TILE_SIZE + TILE_SPACING) - offsetZ,
+                        x * (CONFETTI_WIDTH + CONFETTI_SPACING) - offsetX,
+                        CONFETTI_HEIGHT_OFFSET,
+                        z * (CONFETTI_DEPTH + CONFETTI_SPACING) - offsetZ,
                     )
-                    quaternion = Quat()
+                    // 随机水平旋转，让彩带朝向自然杂乱
+                    quaternion = EulerAngles(0f, random.nextFloat() * 360f, 0f).toQuat()
                 }
                 parent.addChild(entity)
-                dirtTiles.add(entity)
+                confettiPieces.add(entity)
             }
         }
     }
 
     /**
-     * 清洁 [position] 周围 [radius] 范围内的污渍。
-     * 返回本次清洁掉的污渍数量。
+     * 清洁 [position] 周围 [radius] 范围内的彩带。
+     * 返回本次清洁掉的数量。
      */
     fun cleanAt(position: Vector3, radius: Float): Int {
         var cleaned = 0
-        val iterator = dirtTiles.iterator()
+        val iterator = confettiPieces.iterator()
         while (iterator.hasNext()) {
-            val tile = iterator.next()
-            val tilePos = tile.components[TransformComponent::class.java]?.position ?: continue
-            if (horizontalDistance(tilePos, position) <= radius) {
-                tile.enabled = false
+            val piece = iterator.next()
+            val piecePos = piece.components[TransformComponent::class.java]?.position ?: continue
+            if (horizontalDistance(piecePos, position) <= radius) {
+                piece.enabled = false
                 iterator.remove()
                 cleaned++
             }
@@ -99,21 +115,21 @@ object DirtManager {
     }
 
     /**
-     * 返回当前剩余污渍数量。
+     * 返回当前剩余彩带数量。
      */
-    fun remainingCount(): Int = dirtTiles.size
+    fun remainingCount(): Int = confettiPieces.size
 
     /**
-     * 返回污渍总数。
+     * 返回彩带总数。
      */
-    fun totalCount(): Int = dirtTiles.size
+    fun totalCount(): Int = confettiPieces.size
 
     /**
-     * 重置所有污渍。
+     * 重置所有彩带。
      */
     fun reset() {
-        dirtTiles.forEach { it.destroy() }
-        dirtTiles.clear()
+        confettiPieces.forEach { it.destroy() }
+        confettiPieces.clear()
         floorEntity?.destroy()
         floorEntity = null
     }
