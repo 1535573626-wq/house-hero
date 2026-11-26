@@ -16,10 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.pico.spatial.ui.design.Button
 import com.pico.spatial.ui.design.Text
 import com.pico.spatial.ui.foundation.content.SpatialView
 import com.roomhero.app.manager.DirtManager
+import com.roomhero.app.manager.RoomSurfaceManager
 import com.roomhero.app.manager.VacuumManager
 import com.roomhero.app.viewmodel.GameViewModel
 import kotlinx.coroutines.coroutineScope
@@ -56,32 +56,29 @@ fun GameStage() {
     key(restartKey) {
         MainStageContent(viewModel)
     }
-
-    if (!gameState.isPlaying && gameState.timeRemaining == 60) {
-        StartScreen(onStart = { viewModel.startGame(DirtManager.totalCount()) })
-    }
-}
-
-@Composable
-private fun StartScreen(onStart: () -> Unit) {
-    Column(modifier = Modifier.padding(24.dp)) {
-        Text(text = "Room Hero")
-        Text(text = "戴上 PICO，把枯燥家务变成游戏")
-        Button(onClick = onStart) {
-            Text("开始清洁")
-        }
-    }
 }
 
 @Composable
 private fun MainStageContent(viewModel: GameViewModel) {
+    var scanStatus by remember { mutableStateOf("扫描房间地面中，请缓慢环顾四周...") }
+    var isReady by remember { mutableStateOf(false) }
+
     SpatialView(
         initial = { content, _ ->
             content.addEntity(DirtManager.root)
             content.addEntity(VacuumManager.root)
 
-            DirtManager.spawnDirtGrid()
+            val surface = RoomSurfaceManager.awaitFloor(timeoutMillis = 5000L)
+            scanStatus = if (surface.isFallback) {
+                "未检测到真实地面，使用虚拟地面演示。"
+            } else {
+                "已检测到地面，面积 ${surface.bounds.x.toInt()}×${surface.bounds.y.toInt()} 米"
+            }
+
+            DirtManager.spawnDirtGrid(surface)
             VacuumManager.start()
+            viewModel.startGame(DirtManager.totalCount())
+            isReady = true
 
             coroutineScope {
                 // 清洁循环：每 50ms 检查一次吸尘器与污渍的距离
@@ -115,19 +112,27 @@ private fun MainStageContent(viewModel: GameViewModel) {
 
             DirtManager.reset()
             VacuumManager.stop()
+            RoomSurfaceManager.stop()
         }
     )
 
     // HUD overlay
-    GameHUD(viewModel)
+    GameHUD(viewModel, scanStatus, isReady)
 }
 
 @Composable
-private fun GameHUD(viewModel: GameViewModel) {
+private fun GameHUD(viewModel: GameViewModel, scanStatus: String, isReady: Boolean) {
     val gameState by viewModel.gameState.collectAsState()
     Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = "时间: ${gameState.timeRemaining}s")
-        Text(text = "分数: ${gameState.score}")
-        Text(text = "清洁率: ${gameState.cleanPercent}%")
+        if (!isReady) {
+            Text(text = scanStatus)
+        } else {
+            Text(text = "时间: ${gameState.timeRemaining}s")
+            Text(text = "分数: ${gameState.score}")
+            Text(text = "清洁率: ${gameState.cleanPercent}%")
+            if (!gameState.isPlaying && gameState.timeRemaining == 0) {
+                Text(text = "时间到！最终得分: ${gameState.score}")
+            }
+        }
     }
 }

@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- 空间感知：平面检测、空间网格、场景理解 -->
+    <uses-permission android:name="com.picovr.permission.SPATIAL_DATA" />
+
     <application
         android:name=".platform.SpatialApplication"
         android:dataExtractionRules="@xml/data_extraction_rules"
