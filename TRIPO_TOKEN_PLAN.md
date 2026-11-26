@@ -16,20 +16,29 @@
 
 既然你想「不止奖杯」，以下是可行的扩展方向，按推荐程度排序：
 
-### 2.1 整理模式：真实物品 3D 模型（强烈推荐）
-把整理模式里的方块物品替换成 Tripo 生成的真实物品：
-- `book`, `coffee cup`, `phone charger`, `toy car`
-- 配合 SpatialML 标签，「识别出的物品」直接显示为真实形状
+### 2.1 整理模式：目标收纳容器 3D 模型（强烈推荐）
+整理模式的真实桌面上已经有真实物品，不应该再叠加一个虚拟书/杯子（会穿模）。
 
-**优点**：直观展示 AI 识别 + 3D 生成的结合，游戏感更强。  
-**积分消耗**：4 类物品 × 1 个模型 = 4 个（~100 积分），缓存复用。
+Tripo 在这里的合理用法是生成**目标收纳容器**：
+- 当 SpatialML 识别出桌上有书 → 生成一个**书架**虚线模型，提示用户把书放回去
+- 识别出杯子 → 生成一个**杯架/托盘**虚线模型
+- 识别出充电器 → 生成一个**收纳盒**虚线模型
+- 识别出玩具 → 生成一个**玩具箱**虚线模型
 
-### 2.2 家具模式：真实家具模型（强烈推荐）
-把 Furniture 模式的可拖动方块替换成真实家具：
+**优点**：既展示 AI 3D 生成，又不和真实物品冲突；收纳建议更直观。  
+**积分消耗**：4 类容器 × 1 个模型 = 4 个（~100 积分），缓存复用。
+
+### 2.2 家具模式：预置家具模型库（推荐）
+把 Furniture 模式的可拖动方块替换成常见家具模型：
 - `small sofa`, `wooden cabinet`, `bedside table`, `bookshelf`
 
-**优点**：与「真实房间布局规划」主题完美契合。  
-**积分消耗**：4-6 个模型（~100-150 积分）。
+**为什么不建议用 Tripo 生成「用户自己的家具」？**
+- Tripo 主能力是 text-to-3D，image-to-3D 成本高、耗时长
+- 每个用户家里家具不同，逐个拍照生成会消耗大量积分且体验断续
+- 更实际的做法：预置常见家具库 + 用 MeshTrackingManager 识别真实家具轮廓作为碰撞/空间参考
+
+**优点**：与「真实房间布局规划」主题契合，可控、可复用。  
+**积分消耗**：4-6 个模型（~100-150 积分），放入 assets 缓存。
 
 ### 2.3 成就徽章/头像（中等推荐）
 根据玩家历史数据生成小徽章：
@@ -91,10 +100,10 @@
 | 金牌奖杯 | 奖励金牌 | `shiny golden trophy, low poly, game asset` |
 | 银牌奖杯 | 奖励银牌 | `silver medal trophy, low poly, game asset` |
 | 铜牌奖杯 | 奖励铜牌 | `bronze trophy, low poly, game asset` |
-| 书 | 整理模式物品 | `closed book, low poly, game asset` |
-| 杯子 | 整理模式物品 | `ceramic mug, low poly, game asset` |
-| 充电器 | 整理模式物品 | `phone charger cable, low poly, game asset` |
-| 玩具 | 整理模式物品 | `small toy car, low poly, game asset` |
+| 书架 | 整理模式容器 | `small bookshelf, low poly, game asset` |
+| 杯架/托盘 | 整理模式容器 | `cup tray, low poly, game asset` |
+| 收纳盒 | 整理模式容器 | `storage box, low poly, game asset` |
+| 玩具箱 | 整理模式容器 | `toy box, low poly, game asset` |
 | 小沙发 | 家具模式 | `small sofa, low poly, game asset` |
 | 木柜 | 家具模式 | `wooden cabinet, low poly, game asset` |
 
