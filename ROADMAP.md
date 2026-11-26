@@ -1,27 +1,28 @@
 # House Hero — 项目全景与进度
 
-> 交互备忘：切换对话后快速恢复上下文用。目标、已做、未做、下一步都在这里。
+> 交互备忘：切换对话后快速恢复上下文用。目标、已做、未做、下一步都在这里。  
+> 更新时间：2026-11-27
 
 ## 1. 一句话创意
 
-**House Hero** = 把真实家务变成 MR 游戏的 PICO Spatial 应用。戴上头显后，自家地面变成满屏派对彩带，桌面变成待整理物品；打扫/整理过程被计分、限时、给成就，结束还能生成 3D 奖杯。
+**House Hero** = 把真实家务变成 MR 游戏的 PICO Spatial 应用。戴上头显后，自家地面变成满屏派对彩带，桌面变成待整理物品；打扫/整理过程被计分、限时、给成就，结束还能生成 3D 奖杯。自由整理模式则把真实家具扫描成线框占位模型，让用户在 MR 里试摆新布局。
 
 ## 2. 我们要把 PICO 性能/能力用到什么程度
 
-赛道：**Spatial 空间应用创作 — Android Kotlin Compose**。
+赛道：**Spatial 空间应用创作 — Android Kotlin Compose**。  
 官方给的 SDK 能力几乎都要覆盖：
 
 | SDK 能力 | 计划用法 | 状态 |
 |---|---|---|
 | **Spatial Mesh / Plane Tracking** | 扫描真实地面、桌面，锚定彩带/物品/家具 | ✅ 已用 |
 | **HMD Tracking** | 头部前方固定光标（吸尘器/抓取点） | ✅ 已用 |
-| **Hand Tracking / Gesture** | 捏合右手确认：Ready 开始游戏 / Furniture 抓起时放下 / Finished 重置 | ✅ 已用 |
+| **Hand Tracking / Gesture** | 捏合右手确认：Ready 开始游戏 / Furniture 抓起时放下 / Finished 重置 | ✅ 已用（Emulator 上报缺权限，功能代码已接入） |
 | **Spatial UI (WindowContainer / PicoTheme)** | 悬浮 HUD、模式选择、计时、分数、结束按钮 | ✅ 已用 |
 | **Spatial Audio** | 清洁成功、放置成功、游戏结束 3D 音效 | ✅ 已用 |
-| **Physics (RigidBody/Collision)** | 自由摆放家具模式：抓起、释放、重力碰撞 | ✅ 已用 |
-| **Spatial ML / Sense Mesh** | 整理模式：用 MeshTrackingManager 语义 TABLE 对齐真实桌面；家具模式：真实家具（CABINET/SOFA/BED/CHAIR/TABLE）包围盒碰撞警告 | 🟡 Mesh 语义已用；SecureMR 自定义模型待补 |
-| **Tripo 3D 生成** | 游戏结束后按分数生成 3D 奖杯/奖励模型 | 🟡 异步 HTTP 接口已写，无 token 时 fallback 五角星；拿到 token 后填 key 即生效 |
-| **Spatial Anchor / Persistence** | 保存房间布局、家具位置，下次进应用恢复 | ✅ 已用 |
+| **Physics (RigidBody/Collision)** | 早期 Furniture 模式：抓起、释放、重力碰撞 | ✅ 已用；当前自由整理改为 Kinematic 无重力，更贴合“试摆”场景 |
+| **Spatial ML / Sense Mesh** | 整理模式：用 MeshTrackingManager 语义 TABLE 对齐真实桌面；家具模式：**加载真实家具 mesh 生成线框占位模型** | ✅ 真实家具 wireframe 占位已上线 |
+| **Tripo 3D 生成** | 游戏结束后按分数生成 3D 奖杯/奖励模型；整理模式目标收纳容器；家具模式预置模型库 | 🟡 token 已配置在 `local.properties`，接口已接，尚未实际调用 |
+| **Spatial Anchor / Persistence** | 保存房间布局、家具位置，下次进应用恢复 | ✅ 已用（UUID 匹配真实家具锚点） |
 | **Spatial Video / Passthrough VFX** | 彩带飘落、清洁完成时的粒子/彩带雨、地面 shader 反馈 | 🟡 彩带雨粒子已做；地面 shader / 清洁轨迹待补 |
 | **Animation** | 奖励奖杯旋转浮动、成功反馈缩放动画 | 🟡 基础缩放+旋转浮动已做 |
 
@@ -32,24 +33,24 @@
 | 加分项 | 当前对齐 | 备注 |
 |---|---|---|
 | 创新性：把无聊家务游戏化 | ✅ | 清洁+整理+摆家具三合一 |
-| 深度使用 Spatial SDK | 🟡 | 核心能力+Mesh语义+Anchor+粒子已用；SecureMR 自定义模型+Video待补 |
-| 手势追踪交互 | ✅ | 捏合确认已覆盖 Ready/Playing(Furniture)/Finished 阶段 |
-| 真实空间理解（mesh/平面/语义） | ✅ | 地面/桌面检测 |
-| 物理模拟与真实环境结合 | ✅ | Furniture 模式 |
-| AI/ML 能力（SpatialML + Tripo） | 🟡 | Sense Mesh 语义已用；SecureMR 自定义模型 + Tripo token 待补 |
-| 完整 UX 流程（开始→游戏→结束→奖励） | 🟡 | 流程通，奖励 Tripo 接口已接，等 token 验证真实模型 |
+| 深度使用 Spatial SDK | ✅ | Mesh语义+Anchor+粒子+Physics+SpatialUI 已整合 |
+| 手势追踪交互 | 🟡 | 捏合确认代码已覆盖 Ready/Playing(Furniture)/Finished；Emulator 缺权限未实际验证 |
+| 真实空间理解（mesh/平面/语义） | ✅ | 地面/桌面检测 + 真实家具 mesh 占位 |
+| 物理模拟与真实环境结合 | ✅ | 家具模式保留物理碰撞警告；自由整理用 Kinematic 试摆 |
+| AI/ML 能力（SpatialML + Tripo） | 🟡 | Sense Mesh 语义已用；Tripo token 已配，待真实调用 |
+| 完整 UX 流程（开始→游戏→结束→奖励） | 🟡 | 流程通，奖励 Tripo 接口已接，待真实模型验证 |
 | 性能优化 / 压榨硬件 | 🟡 | FPS/实体计数 HUD、彩带数量上限已做；真机 LOD 待测 |
 | 可扩展性 / 商业潜力 | 🟡 | 思路有，需包装 |
 
 ## 4. 当前已完成的模块
 
 - [x] 项目骨架：Kotlin + Compose + Spatial SDK 6.2.8
-- [x] 三种游戏模式切换：清洁 / 整理 / 摆家具
+- [x] 三种模式切换：清洁 / 整理 / 自由整理（摆家具）
 - [x] RoomSurfaceManager：启动 PlaneTracking + MeshTracking，等待地面/桌面/真实家具 mesh，fallback 虚拟表面
 - [x] DirtManager：在地面上生成彩色派对彩带，HMD 光标靠近清除
 - [x] OrganizeManager：桌面生成物品+虚线目标框，优先对齐真实 TABLE mesh，模拟 SpatialML 物品标签
-- [x] FurnitureManager：物理世界 + 可抓取家具 + 重力释放碰撞 + 真实家具 mesh 碰撞警告 + 布局持久化
-- [x] FurnitureAnchorManager：SharedPreferences + WorldTrackingManager 空间锚点保存/恢复家具布局
+- [x] **FurnitureManager 升级**：从 `RoomSurfaceManager` 读取真实家具 mesh，按语义生成彩色线框占位模型；可拖动试摆新布局；放下后保持位置不坠落
+- [x] FurnitureAnchorManager：SharedPreferences + WorldTrackingManager 空间锚点保存/恢复家具布局；快照带 `anchorUUID` + label，跨会话匹配真实家具
 - [x] VacuumManager：HMD 前方光标，跟随头部移动
 - [x] FeedbackManager：空间音效 + 缩放消失动画 + 游戏结束彩带雨粒子
 - [x] PerformanceManager：FPS 与活跃实体数统计，HUD 实时显示
@@ -57,32 +58,40 @@
 - [x] GameStateManager：阶段机（Scanning / Ready / Playing / Finished）+ 计分/倒计时
 - [x] GameHUDWindow：SpatialUI 悬浮面板，显示模式选择、计时、分数、进度
 - [x] RewardManager：游戏结束后按分数生成 1~3 个旋转浮动的 3D 奖杯（本地五角星占位）
-- [x] TripoClient 占位：无 token 时返回程序化五角星 mesh
+- [x] TripoClient 占位：无 token 时返回程序化五角星 mesh；token 已注入 `BuildConfig`
 
 ## 5. 还没做但计划做（优先级排序）
 
-1. **Hand Tracking 手势交互**
-   - 用 pinch/air-tap 替代按钮点击，做家务时手空不出来握手柄
-   - 面板按钮支持手势 hover + 捏合确认
+### 5.1 当前这一轮要做的（自由整理继续升级）
 
-2. **SpatialML / Sense Mesh 真正落地** ✅ 基础版已完成
-   - 整理模式：识别桌上物品（书、充电器、杯子等），自动推荐归类区域
-   - 家具模式：识别真实家具轮廓，给出“能否放这里”的碰撞/空间建议
-   - 可选：用 SecureMR 做实时物体检测或平面分割
+1. **占位模型视觉升级**
+   - 线框 + 半透明填充 ghost 同时显示，更像“可拖动规划模型”
+   - 每个占位模型顶部加标签（SOFA / CABINET / BED …）
+   - 拖动时放大+高亮，放下后恢复
 
-3. **Tripo 3D 真实奖励模型**
-   - 拿到 token 后把 `TripoClient.generate()` 改为真实 HTTP 调用
-   - 根据分数等级请求不同 prompt（金/银/铜奖杯、皇冠、彩带堆）
+2. **整理模式真实物品 mesh 接入**
+   - 不只是 TABLE 语义对齐，而是读取桌上识别出的真实物体 mesh
+   - 给每个真实物体生成目标收纳容器虚线（书架/杯架/收纳盒/玩具箱）
+   - 这里可以用 Tripo 生成 4 类容器模型
 
-4. **Spatial Anchor + 持久化**
-   - 保存用户房间的最佳家具布局
-   - 下次启动恢复上次的整理/摆放状态
+3. **手势交互真正可用**
+   - 修复 Emulator 上 `HAND_TRACKING` 权限问题
+   - 让 HUD 按钮支持手部 hover + 捏合点击
+   - 清洁/整理模式下也能用手势“抓取/确认”
+
+### 5.2 下一阶段要做的
+
+4. **Tripo 真实 3D 模型落地**
+   - Phase 1：联调 1 个奖杯模型（~25 积分）
+   - Phase 2：整理容器 + 家具预置模型（8-12 个模型，~200-300 积分）
+   - 全部走 assets + 本地文件 + 内存三级缓存，避免重复扣费
+   - 详细预算见 `TRIPO_TOKEN_PLAN.md`
 
 5. **视觉与反馈升级**
    - 清洁时彩带被吸走的粒子轨迹
-   - 完美清洁时的彩带雨/全屏反馈
-   - 整理成功时目标框发光动画
-   -  furniture 放下时的落地冲击波/音效
+   - 完美清洁时的全屏彩带雨 + 音效
+   - 整理成功时目标框发光 + 物品吸附动画
+   - 家具模式：放置碰撞时除了变红，再加震动/音效反馈
 
 6. **成就与进度系统**
    - 连续清洁天数、最快完成时间、最高分数
@@ -100,18 +109,19 @@
 
 ## 6. 当前阻塞项
 
-- [ ] **Tripo token 未分发** → 奖励模型只能用占位五角星
 - [ ] **无真机** → 部分 SpatialML / Anchor / 手势功能只能在 Emulator 上有限验证
+- [ ] **Hand Tracking 权限在 Emulator 未生效** → 日志显示 `no com.picovr.permission.HAND_TRACKING permission`，需检查 manifest 与运行时权限
 - [ ] **Android SDK Platform 35 / 37 警告** → AGP 8.13.2 对 SDK 37 支持未测试，已通过 `suppressUnsupportedCompileSdk` 绕过，但后续建议升级 AGP
+- [ ] **Tripo API 尚未真实调用** → token 已配置，需 Phase 1 联调确认响应字段与 GLB 加载
 
 ## 7. 下一步（建议）
 
 按“先让 Demo 在 Emulator 跑通，再堆高级功能”的顺序：
 
-1. 把当前 APK 安装到 PICO Emulator，确认三模式都能跑完并看到奖励按钮。
-2. 加手势追踪：HUD 按钮支持手捏合点击。
-3. 接入 SpatialML：先做一个最简单的“桌面物品分类推荐”原型。
-4. 拿到 Tripo token 后替换真实 3D 奖励生成。
+1. ✅ 自由整理占位模型已上线；继续视觉升级（ghost 填充 + 标签 + 悬停动画）。
+2. 修复 Hand Tracking 权限，让 Emulator 上也能手势点击 HUD。
+3. 整理模式接入真实物体 mesh / Tripo 容器模型原型。
+4. Phase 1 联调 Tripo 真实奖杯生成（~25 积分）。
 5. 加粒子/彩带雨等视觉反馈，让“游戏感”更强。
 6. 最后做性能调优与提交材料。
 
@@ -123,8 +133,8 @@ cd "/Users/ec/Desktop/飞书/house hero/house-hero"
 ./gradlew :app:assembleDebug
 
 # 安装并启动（PICO Emulator 需先启动）
-pico-cli app install
-pico-cli app launch
+pico-cli app install "/Users/ec/Desktop/飞书/house hero/house-hero/app/build/outputs/apk/debug/app-debug.apk"
+pico-cli app launch com.roomhero.app
 ```
 
 GitHub: https://github.com/1535573626-wq/house-hero.git

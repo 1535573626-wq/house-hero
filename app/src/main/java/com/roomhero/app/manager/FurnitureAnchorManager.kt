@@ -51,6 +51,8 @@ object FurnitureAnchorManager {
                     put("qy", snapshot.rotation.y)
                     put("qz", snapshot.rotation.z)
                     put("qw", snapshot.rotation.w)
+                    put("anchorUUID", snapshot.anchorUUID?.toString() ?: "")
+                    put("label", snapshot.label ?: "")
                 },
             )
         }
@@ -89,6 +91,13 @@ object FurnitureAnchorManager {
         val layoutArray = JSONArray(layoutJson)
         for (i in 0 until layoutArray.length()) {
             val obj = layoutArray.getJSONObject(i)
+            val anchorUUID = obj.optString("anchorUUID", "").takeIf { it.isNotBlank() }?.let {
+                try {
+                    java.util.UUID.fromString(it)
+                } catch (_: IllegalArgumentException) {
+                    null
+                }
+            }
             snapshots.add(
                 FurnitureSnapshot(
                     position = Vector3(
@@ -102,6 +111,8 @@ object FurnitureAnchorManager {
                         obj.getDouble("qz").toFloat(),
                         obj.getDouble("qw").toFloat(),
                     ),
+                    anchorUUID = anchorUUID,
+                    label = obj.optString("label", "").takeIf { it.isNotBlank() },
                 ),
             )
         }
@@ -142,8 +153,13 @@ object FurnitureAnchorManager {
 
 /**
  * 单个家具的持久化快照。
+ *
+ * @param anchorUUID 对应真实家具扫描锚点的 UUID，用于跨会话匹配
+ * @param label 家具语义标签，如 SOFA、CABINET 等
  */
 data class FurnitureSnapshot(
     val position: Vector3,
     val rotation: Quat,
+    val anchorUUID: java.util.UUID? = null,
+    val label: String? = null,
 )

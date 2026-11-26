@@ -1,42 +1,63 @@
 package com.roomhero.app.manager
 
-import com.pico.spatial.core.ecs.CollisionComponent
 import com.pico.spatial.core.ecs.Entity
 import com.pico.spatial.core.ecs.ModelComponent
-import com.pico.spatial.core.ecs.PhysicsWorldComponent
-import com.pico.spatial.core.ecs.RigidBodyComponent
 import com.pico.spatial.core.ecs.TransformComponent
 import com.pico.spatial.core.ecs.resource.MeshResource
-import com.pico.spatial.core.ecs.resource.PhysicallyBasedMaterial
-import com.pico.spatial.core.ecs.resource.PhysicsMaterialResource
-import com.pico.spatial.core.ecs.resource.ShapeResource
-import com.pico.spatial.sense.base.SemanticLabelType
-import com.pico.spatial.core.ecs.simulation.CollisionFilter
-import com.pico.spatial.core.ecs.simulation.CollisionInfoDetailLevel
-import com.pico.spatial.core.ecs.simulation.CollisionResponseMode
-import com.pico.spatial.core.ecs.simulation.MassProperties
-import com.pico.spatial.core.ecs.simulation.RigidBodyMode
+import com.pico.spatial.core.ecs.resource.PolygonFillMode
+import com.pico.spatial.core.ecs.resource.UnlitMaterial
 import com.pico.spatial.core.math.Color4
 import com.pico.spatial.core.math.Quat
 import com.pico.spatial.core.math.Vector3
+import com.pico.spatial.sense.base.SemanticLabelType
+import java.util.UUID
 
-private const val GRAB_RADIUS = 0.25f
+private const val MAX_PLACEHOLDERS = 12
+private const val MIN_GRAB_RADIUS = 0.20f
+
+private val FURNITURE_TYPES = listOf(
+    SemanticLabelType.SOFA,
+    SemanticLabelType.CABINET,
+    SemanticLabelType.BED,
+    SemanticLabelType.TABLE,
+    SemanticLabelType.CHAIR,
+    SemanticLabelType.REFRIGERATOR,
+    SemanticLabelType.WASHING_MACHINE,
+    SemanticLabelType.AIR_CONDITIONER,
+    SemanticLabelType.PLANT,
+    SemanticLabelType.LAMP,
+)
+
+private val SEMANTIC_COLORS = mapOf(
+    SemanticLabelType.SOFA to Color4(0.95f, 0.55f, 0.25f, 0.90f),
+    SemanticLabelType.CABINET to Color4(0.55f, 0.35f, 0.20f, 0.90f),
+    SemanticLabelType.BED to Color4(0.25f, 0.55f, 0.85f, 0.90f),
+    SemanticLabelType.TABLE to Color4(0.35f, 0.75f, 0.45f, 0.90f),
+    SemanticLabelType.CHAIR to Color4(0.85f, 0.35f, 0.65f, 0.90f),
+    SemanticLabelType.REFRIGERATOR to Color4(0.80f, 0.85f, 0.90f, 0.90f),
+    SemanticLabelType.WASHING_MACHINE to Color4(0.70f, 0.75f, 0.80f, 0.90f),
+    SemanticLabelType.AIR_CONDITIONER to Color4(0.50f, 0.70f, 0.80f, 0.90f),
+    SemanticLabelType.PLANT to Color4(0.30f, 0.75f, 0.35f, 0.90f),
+    SemanticLabelType.LAMP to Color4(1.00f, 0.90f, 0.25f, 0.90f),
+)
 
 /**
- * 单个可摆放家具。
+ * 单个可拖动的家具占位模型。
  *
- * @param id 唯一编号
- * @param entity 家具实体
- * @param size 碰撞体尺寸
- * @param material 材质引用，用于碰撞警告时变色
+ * @param anchorUUID 对应真实空间网格锚点的 UUID
+ * @param label 语义标签
+ * @param entity 占位模型实体
+ * @param size 包围盒尺寸
+ * @param material 线框材质，碰撞警告时会变色
  * @param originalColor 原始颜色
  * @param isGrabbed 是否正被光标抓起
  */
 data class FurnitureItem(
-    val id: Int,
+    val anchorUUID: UUID,
+    val label: String,
     val entity: Entity,
     val size: Vector3,
-    val material: PhysicallyBasedMaterial,
+    val material: UnlitMaterial,
     val originalColor: Color4,
     var isGrabbed: Boolean = false,
 )
@@ -44,122 +65,107 @@ data class FurnitureItem(
 /**
  * 自由摆放家具管理器。
  *
- * - 初始化物理世界与地面碰撞体
- * - 生成若干带 RigidBody + Collision 的方块家具
- * - 用户移动光标靠近家具即可吸附抓起（切换为 Kinematic）
- * - 调用 [release] 后家具恢复 Dynamic，受重力落下并与地面/其他家具碰撞
+ * - 不再使用程序生成的方块，而是读取 [RoomSurfaceManager] 扫描到的真实家具空间网格
+ * - 为每件真实家具生成一个线框/半透明占位模型，覆盖在原家具上
+ * - 用户可拖动占位模型试摆新布局；放下后保持位置，不触发物理坠落
+ * - 布局通过 [FurnitureAnchorManager] 持久化，下次启动可恢复
  */
 object FurnitureManager {
     val root: Entity = Entity()
 
     private val items = mutableListOf<FurnitureItem>()
-    private var floorEntity: Entity? = null
-
-    private val furnitureSpecs = listOf(
-        Triple(Vector3(0.30f, 0.20f, 0.20f), Color4(0.85f, 0.45f, 0.25f, 1.0f), Vector3(-0.5f, 0f, 0.3f)),
-        Triple(Vector3(0.20f, 0.35f, 0.20f), Color4(0.35f, 0.65f, 0.85f, 1.0f), Vector3(0.0f, 0f, 0.0f)),
-        Triple(Vector3(0.25f, 0.15f, 0.40f), Color4(0.55f, 0.75f, 0.35f, 1.0f), Vector3(0.5f, 0f, -0.3f)),
-    )
 
     /**
-     * 在 [surface] 上生成物理世界与家具。
+     * 在 [surface] 上根据真实扫描家具生成占位模型。
      *
-     * 若 [savedLayout] 不为空，会按保存的位置/旋转恢复家具，实现持久化布局。
+     * 若 [savedLayout] 不为空，会按保存的位置/旋转恢复对应 UUID 的家具占位模型。
      */
     fun spawnFurniture(surface: FloorSurface, savedLayout: List<FurnitureSnapshot>? = null) {
         reset()
 
-        // 物理世界
-        root.components.set(PhysicsWorldComponent())
+        val meshes = FURNITURE_TYPES
+            .flatMap { RoomSurfaceManager.getFurnitureMeshes(it) }
+            .sortedByDescending { it.boundingBoxSize.x * it.boundingBoxSize.y * it.boundingBoxSize.z }
+            .take(MAX_PLACEHOLDERS)
 
-        // 地面碰撞体（静态）
-        val floor = Entity().apply {
-            components[TransformComponent::class.java]?.apply {
-                position = surface.position
-                quaternion = surface.rotation
-            }
+        if (meshes.isEmpty()) {
+            // Emulator / 无扫描结果时给一个 fallback 占位，保证界面不空
+            createFallbackPlaceholder(surface)
+            return
         }
-        val floorShape = ShapeResource.createBox(Vector3(4f, 0.05f, 4f))
-        floor.components.set(
-            CollisionComponent(
-                listOf(floorShape),
-                PhysicsMaterialResource(staticFriction = 0.8f, dynamicFriction = 0.8f, restitution = 0.1f),
-                collisionResponseMode = CollisionResponseMode.COLLIDER_FULL,
-                collisionFilter = CollisionFilter.COLLISION_FILTER_DEFAULT,
-                collisionInfoDetailLevel = CollisionInfoDetailLevel.BRIEF,
-            )
-        )
-        // 地面不需要 RigidBody，纯静态碰撞体即可
-        root.addChild(floor)
-        floorEntity = floor
 
-        // 家具
-        furnitureSpecs.forEachIndexed { index, (size, color, localPos) ->
-            val mesh = MeshResource.createBox(size, 0.01f) ?: return@forEachIndexed
-            val shape = ShapeResource.createBox(size)
-            val material = PhysicallyBasedMaterial.create().apply {
-                setBaseColor(color)
-                setOpacity(0.95f)
+        meshes.forEachIndexed { index, meshAnchor ->
+            val primarySemantic = meshAnchor.semantics.firstOrNull { it in FURNITURE_TYPES }
+                ?: SemanticLabelType.UNKNOWN
+            val color = SEMANTIC_COLORS[primarySemantic] ?: Color4(0.75f, 0.75f, 0.75f, 0.90f)
+            val label = primarySemantic.name
+
+            val mesh = try {
+                MeshResource.loadFromMeshAnchor(meshAnchor.anchorUUID)
+            } catch (_: Exception) {
+                try {
+                    MeshResource.createBox(meshAnchor.boundingBoxSize, 0.01f)
+                } catch (_: Exception) {
+                    null
+                }
             }
+
+            if (mesh == null) return@forEachIndexed
+
+            val material = UnlitMaterial.create().apply {
+                setBaseColor(color)
+                setPolygonFillMode(PolygonFillMode.LINE)
+                setOpacity(0.85f)
+            }
+
             val entity = Entity().apply {
                 components.set(ModelComponent(mesh, material))
             }
 
-            val saved = savedLayout?.getOrNull(index)
-            val startPosition = saved?.position ?: run {
-                val startY = size.y / 2f + 0.1f * (index + 1)
-                surface.position + Vector3(localPos.x, startY, localPos.z)
-            }
-            val startRotation = saved?.rotation ?: Quat()
+            val saved = savedLayout?.find { it.anchorUUID == meshAnchor.anchorUUID }
+            val startPosition = saved?.position ?: meshAnchor.transform.position
+            val startRotation = saved?.rotation ?: meshAnchor.transform.rotation.toQuat()
 
             entity.components[TransformComponent::class.java]?.apply {
                 position = startPosition
                 quaternion = startRotation
             }
 
-            entity.components.set(
-                CollisionComponent(
-                    listOf(shape),
-                    PhysicsMaterialResource(staticFriction = 0.5f, dynamicFriction = 0.5f, restitution = 0.2f),
-                    collisionResponseMode = CollisionResponseMode.COLLIDER_FULL,
-                    collisionFilter = CollisionFilter.COLLISION_FILTER_DEFAULT,
-                    collisionInfoDetailLevel = CollisionInfoDetailLevel.BRIEF,
+            root.addChild(entity)
+            items.add(
+                FurnitureItem(
+                    anchorUUID = meshAnchor.anchorUUID,
+                    label = label,
+                    entity = entity,
+                    size = meshAnchor.boundingBoxSize,
+                    material = material,
+                    originalColor = color,
                 )
             )
-            entity.components.set(
-                RigidBodyComponent().apply {
-                    massProperties = MassProperties(mass = 1f, inertia = Vector3(1f), centerOfMass = Vector3.ZERO)
-                    rigidBodyMode = RigidBodyMode.DYNAMIC
-                    isAffectedByGravity = true
-                }
-            )
-
-            root.addChild(entity)
-            items.add(FurnitureItem(index, entity, size, material, color))
         }
     }
 
     /**
-     * 获取当前所有家具的持久化快照。
+     * 获取当前所有占位模型的持久化快照。
      */
     fun snapshot(): List<FurnitureSnapshot> = items.map { item ->
         val transform = item.entity.components[TransformComponent::class.java]
         FurnitureSnapshot(
             position = transform?.position ?: Vector3.ZERO,
             rotation = transform?.quaternion ?: Quat.identity(),
+            anchorUUID = item.anchorUUID,
+            label = item.label,
         )
     }
 
     /**
-     * 检查 [cursorPos] 是否抓起家具，并在抓起时检测与真实家具 mesh 的碰撞。
+     * 检查 [cursorPos] 是否抓起/拖动家具占位模型。
      *
-     * 若虚拟家具与扫描到的真实家具（桌子、柜子、沙发等）发生包围盒相交，
-     * 家具会高亮为红色，提示用户此处不可放置。
+     * 拖动过程中会实时检测与真实家具 mesh 的包围盒相交，若重叠则把线框变红提示不可放置。
      */
     fun checkDrag(cursorPos: Vector3): Boolean {
         val grabbed = items.find { it.isGrabbed }
         if (grabbed != null) {
-            // 跟随光标
             grabbed.entity.components[TransformComponent::class.java]?.apply {
                 position = Vector3(cursorPos.x, cursorPos.y, cursorPos.z)
             }
@@ -167,13 +173,13 @@ object FurnitureManager {
             return false
         }
 
-        // 找最近家具抓起
         var nearest: FurnitureItem? = null
         var nearestDist = Float.MAX_VALUE
         items.forEach { item ->
             val pos = item.entity.components[TransformComponent::class.java]?.position ?: return@forEach
+            val grabRadius = kotlin.math.max(MIN_GRAB_RADIUS, kotlin.math.max(item.size.x, item.size.z) * 0.5f)
             val dist = horizontalDistance(pos, cursorPos)
-            if (dist < GRAB_RADIUS && dist < nearestDist) {
+            if (dist < grabRadius && dist < nearestDist) {
                 nearest = item
                 nearestDist = dist
             }
@@ -181,7 +187,6 @@ object FurnitureManager {
 
         nearest?.let { item ->
             item.isGrabbed = true
-            item.entity.components[RigidBodyComponent::class.java]?.rigidBodyMode = RigidBodyMode.KINEMATIC
             return true
         }
 
@@ -189,44 +194,12 @@ object FurnitureManager {
     }
 
     /**
-     * 检测 [item] 是否与真实家具 mesh 发生碰撞，并更新材质颜色。
-     */
-    private fun updateCollisionWarning(item: FurnitureItem) {
-        val itemPos = item.entity.components[TransformComponent::class.java]?.position ?: return
-        val itemMin = itemPos - item.size * 0.5f
-        val itemMax = itemPos + item.size * 0.5f
-
-        val collides = RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.TABLE)
-            .asSequence()
-            .plus(RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.CABINET))
-            .plus(RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.SOFA))
-            .plus(RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.BED))
-            .plus(RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.CHAIR))
-            .any { mesh ->
-                val meshPos = mesh.transform.position
-                val meshSize = mesh.boundingBoxSize
-                val meshMin = meshPos - meshSize * 0.5f
-                val meshMax = meshPos + meshSize * 0.5f
-                aabbIntersects(itemMin, itemMax, meshMin, meshMax)
-            }
-
-        val targetColor = if (collides) Color4(1f, 0.2f, 0.2f, 1f) else item.originalColor
-        item.material.setBaseColor(targetColor)
-    }
-
-    private fun aabbIntersects(minA: Vector3, maxA: Vector3, minB: Vector3, maxB: Vector3): Boolean {
-        return minA.x <= maxB.x && maxA.x >= minB.x &&
-            minA.y <= maxB.y && maxA.y >= minB.y &&
-            minA.z <= maxB.z && maxA.z >= minB.z
-    }
-
-    /**
-     * 放下当前抓起的家具，恢复 Dynamic 受物理模拟。
+     * 放下当前抓起的占位模型，保持当前位置不变。
      */
     fun release() {
         items.find { it.isGrabbed }?.let { item ->
             item.isGrabbed = false
-            item.entity.components[RigidBodyComponent::class.java]?.rigidBodyMode = RigidBodyMode.DYNAMIC
+            updateCollisionWarning(item)
         }
     }
 
@@ -237,9 +210,63 @@ object FurnitureManager {
     fun reset() {
         items.forEach { it.entity.destroy() }
         items.clear()
-        floorEntity?.destroy()
-        floorEntity = null
-        root.components.remove(PhysicsWorldComponent::class.java)
+    }
+
+    /**
+     * 检测 [item] 是否与除自身外的真实家具 mesh 发生碰撞，并更新线框颜色。
+     */
+    private fun updateCollisionWarning(item: FurnitureItem) {
+        val itemPos = item.entity.components[TransformComponent::class.java]?.position ?: return
+        val itemMin = itemPos - item.size * 0.5f
+        val itemMax = itemPos + item.size * 0.5f
+
+        val collides = FURNITURE_TYPES
+            .flatMap { RoomSurfaceManager.getFurnitureMeshes(it) }
+            .any { mesh ->
+                if (mesh.anchorUUID == item.anchorUUID) return@any false
+                val meshPos = mesh.transform.position
+                val meshSize = mesh.boundingBoxSize
+                val meshMin = meshPos - meshSize * 0.5f
+                val meshMax = meshPos + meshSize * 0.5f
+                aabbIntersects(itemMin, itemMax, meshMin, meshMax)
+            }
+
+        val targetColor = if (collides) Color4(1f, 0.2f, 0.2f, 0.90f) else item.originalColor
+        item.material.setBaseColor(targetColor)
+    }
+
+    private fun aabbIntersects(minA: Vector3, maxA: Vector3, minB: Vector3, maxB: Vector3): Boolean {
+        return minA.x <= maxB.x && maxA.x >= minB.x &&
+            minA.y <= maxB.y && maxA.y >= minB.y &&
+            minA.z <= maxB.z && maxA.z >= minB.z
+    }
+
+    private fun createFallbackPlaceholder(surface: FloorSurface) {
+        val size = Vector3(0.40f, 0.45f, 0.40f)
+        val mesh = MeshResource.createBox(size, 0.01f) ?: return
+        val material = UnlitMaterial.create().apply {
+            setBaseColor(Color4(0.80f, 0.80f, 0.80f, 0.85f))
+            setPolygonFillMode(PolygonFillMode.LINE)
+            setOpacity(0.85f)
+        }
+        val entity = Entity().apply {
+            components.set(ModelComponent(mesh, material))
+        }
+        entity.components[TransformComponent::class.java]?.apply {
+            position = surface.position + Vector3(0f, size.y / 2f, 0f)
+            quaternion = Quat.identity()
+        }
+        root.addChild(entity)
+        items.add(
+            FurnitureItem(
+                anchorUUID = UUID(0L, 0L),
+                label = "FALLBACK",
+                entity = entity,
+                size = size,
+                material = material,
+                originalColor = Color4(0.80f, 0.80f, 0.80f, 0.85f),
+            )
+        )
     }
 
     private fun horizontalDistance(a: Vector3, b: Vector3): Float {
