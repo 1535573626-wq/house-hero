@@ -176,11 +176,12 @@ object OrganizeManager {
                 if (horizontalDistance(cursorPos, targetPos) <= PLACE_RADIUS) {
                     item.isPlaced = true
                     item.isGrabbed = false
-                    // 对齐到目标框并播放音效
+                    // 对齐到目标框并播放音效 + 高亮脉冲
                     item.currentEntity.components[TransformComponent::class.java]?.position = targetPos
                     FeedbackManager.playPlaceSuccess(targetPos)
-                    FeedbackManager.fadeOutEntity(item.currentEntity)
-                    FeedbackManager.fadeOutEntity(item.targetEntity)
+                    FeedbackManager.playSparkle(targetPos, item.color)
+                    FeedbackManager.pulseEntity(item.currentEntity)
+                    FeedbackManager.pulseEntity(item.targetEntity)
                     items.remove(item)
                     placed++
                 }

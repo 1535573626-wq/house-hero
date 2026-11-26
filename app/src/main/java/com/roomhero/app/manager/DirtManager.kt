@@ -116,6 +116,7 @@ object DirtManager {
             val piecePos = piece.components[TransformComponent::class.java]?.position ?: continue
             if (horizontalDistance(piecePos, position) <= radius) {
                 FeedbackManager.playCleanSuccess(piecePos)
+                FeedbackManager.playSparkle(piecePos, partyColors.random(Random.Default))
                 FeedbackManager.fadeOutEntity(piece)
                 iterator.remove()
                 cleaned++
