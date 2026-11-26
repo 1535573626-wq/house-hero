@@ -21,7 +21,7 @@
 | **Spatial Audio** | 清洁成功、放置成功、游戏结束 3D 音效 | ✅ 已用 |
 | **Physics (RigidBody/Collision)** | 早期 Furniture 模式：抓起、释放、重力碰撞 | ✅ 已用；当前自由整理改为 Kinematic 无重力，更贴合“试摆”场景 |
 | **Spatial ML / Sense Mesh** | 整理模式：用 MeshTrackingManager 语义 TABLE 对齐真实桌面；家具模式：**加载真实家具 mesh 生成线框占位模型** | ✅ 真实家具 wireframe 占位已上线 |
-| **Tripo 3D 生成** | 游戏结束后按分数生成 3D 奖杯/奖励模型；整理模式目标收纳容器；家具模式预置模型库 | 🟡 token 已配置在 `local.properties`，接口已接，尚未实际调用 |
+| **Tripo 3D 生成** | 游戏结束后按分数生成 3D 奖杯/奖励模型；整理模式目标收纳容器；家具模式预置模型库 | 🟡 v3 接口已接 + 本地缓存；当前环境无法直连 `.ai`，需在真机/可联网环境验证 |
 | **Spatial Anchor / Persistence** | 保存房间布局、家具位置，下次进应用恢复 | ✅ 已用（UUID 匹配真实家具锚点） |
 | **Spatial Video / Passthrough VFX** | 彩带飘落、清洁完成时的粒子/彩带雨、地面 shader 反馈 | 🟡 彩带雨粒子已做；地面 shader / 清洁轨迹待补 |
 | **Animation** | 奖励奖杯旋转浮动、成功反馈缩放动画 | 🟡 基础缩放+旋转浮动已做 |
@@ -81,10 +81,12 @@
 
 ### 5.2 下一阶段要做的
 
-4. **Tripo 真实 3D 模型落地**
-   - Phase 1：联调 1 个奖杯模型（~25 积分）
+4. **Tripo 真实 3D 模型落地** 🟡 代码已升级到 v3
+   - ✅ 客户端从 Tripo v2 迁移到 v3：`/generation/text-to-model` + `/tasks/{task_id}`
+   - ✅ 本地文件缓存：相同 prompt 只生成一次，GLB 存 `cacheDir/tripo_models/`
+   - ✅ 端点可在 `local.properties` 用 `TRIPO_API_ENDPOINT` 覆盖（默认全球 `.ai`，中国区可换 `.com`）
+   - ⏳ Phase 1：在真机/可联网环境联调 1 个奖杯模型（~25 积分）
    - Phase 2：整理容器 + 家具预置模型（8-12 个模型，~200-300 积分）
-   - 全部走 assets + 本地文件 + 内存三级缓存，避免重复扣费
    - 详细预算见 `TRIPO_TOKEN_PLAN.md`
 
 5. **视觉与反馈升级**
@@ -112,7 +114,7 @@
 - [ ] **无真机** → 部分 SpatialML / Anchor / 手势功能只能在 Emulator 上有限验证
 - [ ] **Hand Tracking 权限在 Emulator 未生效** → 日志显示 `no com.picovr.permission.HAND_TRACKING permission`，需检查 manifest 与运行时权限
 - [ ] **Android SDK Platform 35 / 37 警告** → AGP 8.13.2 对 SDK 37 支持未测试，已通过 `suppressUnsupportedCompileSdk` 绕过，但后续建议升级 AGP
-- [ ] **Tripo API 尚未真实调用** → token 已配置，需 Phase 1 联调确认响应字段与 GLB 加载
+- [ ] **Tripo API 尚未真实调用** → v3 接口已接；当前开发环境无法直连 `openapi.tripo3d.ai`，需在真机或能访问该域名的网络下验证
 
 ## 7. 下一步（建议）
 

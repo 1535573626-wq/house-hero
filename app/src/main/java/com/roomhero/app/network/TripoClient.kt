@@ -15,11 +15,11 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * Tripo 3D 模型生成客户端。
+ * Tripo 3D 模型生成客户端（v3 API）。
  *
  * - 无 token 或 token 为空时返回本地程序化五角星 MeshResource
- * - 有 token 时调用 Tripo API 文本生成 3D 模型，下载 GLB 后加载为 MeshResource
- * - 结果按 prompt 缓存，避免重复请求
+ * - 有 token 时调用 Tripo v3 API 文本生成 3D 模型，下载 GLB 后加载为 MeshResource
+ * - 结果按 prompt 内存缓存 + 本地文件缓存，避免重复请求
  *
  * 使用方法：
  * ```kotlin
@@ -30,9 +30,11 @@ import org.json.JSONObject
  */
 object TripoClient {
 
-    private const val BASE_URL = "https://api.tripo3d.ai/v2/openapi"
-    private const val POLL_INTERVAL_MS = 2000L
-    private const val MAX_POLL_SECONDS = 120L
+    // Tripo v2 已于 2026-10-31 下线，默认使用 v3 全球端点。
+    // 可在 local.properties 里加 TRIPO_API_ENDPOINT 覆盖，例如 https://openapi.tripo3d.com/v3
+    private var baseUrl: String = "https://openapi.tripo3d.ai/v3"
+    private const val POLL_INTERVAL_MS = 3000L
+    private const val MAX_POLL_SECONDS = 180L
 
     private var appContext: Context? = null
     private var apiToken: String? = null
@@ -40,9 +42,13 @@ object TripoClient {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        // 优先从 local.properties 注入的 BuildConfig 读取 token
+        // 优先从 local.properties 注入的 BuildConfig 读取 token 与端点
         if (apiToken.isNullOrBlank()) {
             apiToken = com.roomhero.app.BuildConfig.TRIPO_API_TOKEN
+        }
+        val endpoint = com.roomhero.app.BuildConfig.TRIPO_API_ENDPOINT
+        if (endpoint.isNotBlank()) {
+            baseUrl = endpoint
         }
     }
 
@@ -61,17 +67,25 @@ object TripoClient {
             return getOrCreateFallback()
         }
 
-        cache[prompt]?.let { return it }
+        val enhancedPrompt = "${rank.promptPrefix}, low poly, game asset, solid color, centered"
+        cache[enhancedPrompt]?.let { return it }
+
+        // 本地文件缓存：相同 prompt 不重复调用 API
+        val cachedFile = getCachedFile(enhancedPrompt)
+        if (cachedFile != null) {
+            return MeshResource.load(cachedFile.absolutePath, LoadType.FROM_STORAGE)?.also {
+                cache[enhancedPrompt] = it
+            } ?: getOrCreateFallback()
+        }
 
         return withContext(Dispatchers.IO) {
             try {
-                val enhancedPrompt = "${rank.promptPrefix} $prompt, low poly, game asset, solid color"
                 val taskId = createTask(enhancedPrompt, token)
                 val modelUrl = pollTask(taskId, token)
-                val glbFile = downloadModel(modelUrl)
+                val glbFile = downloadModel(modelUrl, enhancedPrompt)
                 val mesh = MeshResource.load(glbFile.absolutePath, LoadType.FROM_STORAGE)
                     ?: throw IllegalStateException("MeshResource.load returned null")
-                cache[prompt] = mesh
+                cache[enhancedPrompt] = mesh
                 mesh
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -81,7 +95,7 @@ object TripoClient {
     }
 
     private fun createTask(prompt: String, token: String): String {
-        val url = URL("$BASE_URL/task")
+        val url = URL("$baseUrl/generation/text-to-model")
         val connection = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Authorization", "Bearer $token")
@@ -92,18 +106,26 @@ object TripoClient {
         }
 
         val body = JSONObject().apply {
-            put("type", "text_to_model")
             put("prompt", prompt)
-            // 可选：控制生成质量/速度，具体以 Tripo 文档为准
-            put("version", "v2.0-20240919")
+            put("model", "v3.1-20260211")
+            put("texture", true)
+            put("pbr", true)
+            put("face_limit", 30000)
+            put("auto_size", true)
+            put("geometry_quality", "standard")
         }.toString()
 
         connection.outputStream.use { it.write(body.toByteArray()) }
 
-        val response = connection.inputStream.bufferedReader().use { it.readText() }
+        val responseCode = connection.responseCode
+        val response = if (responseCode in 200..299) {
+            connection.inputStream.bufferedReader().use { it.readText() }
+        } else {
+            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "HTTP $responseCode"
+        }
         val json = JSONObject(response)
         val data = json.optJSONObject("data")
-            ?: throw IllegalStateException("Tripo create task failed: $response")
+            ?: throw IllegalStateException("Tripo create task failed ($responseCode): $response")
         return data.getString("task_id")
     }
 
@@ -113,7 +135,7 @@ object TripoClient {
         while (System.currentTimeMillis() < deadline) {
             delay(POLL_INTERVAL_MS)
 
-            val url = URL("$BASE_URL/task/$taskId")
+            val url = URL("$baseUrl/tasks/$taskId")
             val connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 setRequestProperty("Authorization", "Bearer $token")
@@ -121,19 +143,24 @@ object TripoClient {
                 readTimeout = 15000
             }
 
-            val response = connection.inputStream.bufferedReader().use { it.readText() }
+            val responseCode = connection.responseCode
+            val response = if (responseCode in 200..299) {
+                connection.inputStream.bufferedReader().use { it.readText() }
+            } else {
+                connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "HTTP $responseCode"
+            }
             val json = JSONObject(response)
             val data = json.optJSONObject("data")
-                ?: throw IllegalStateException("Tripo poll task failed: $response")
+                ?: throw IllegalStateException("Tripo poll task failed ($responseCode): $response")
 
-            val status = data.optString("status", "")
-            when (status.lowercase()) {
-                "success" -> {
-                    val model = data.optJSONObject("model")
-                        ?: throw IllegalStateException("Tripo task has no model: $response")
-                    return model.getString("url")
+            val status = data.optString("status", "").lowercase()
+            when (status) {
+                "success", "completed" -> {
+                    val output = data.optJSONObject("output")
+                        ?: throw IllegalStateException("Tripo task has no output: $response")
+                    return output.getString("model_url")
                 }
-                "failed", "error" -> throw IllegalStateException("Tripo task failed: $response")
+                "failed", "error", "cancelled" -> throw IllegalStateException("Tripo task failed: $response")
                 else -> continue
             }
         }
@@ -141,10 +168,11 @@ object TripoClient {
         throw IllegalStateException("Tripo task polling timeout")
     }
 
-    private fun downloadModel(urlString: String): File {
+    private fun downloadModel(urlString: String, prompt: String): File {
         val context = appContext ?: throw IllegalStateException("TripoClient not initialized")
         val cacheDir = File(context.cacheDir, "tripo_models").apply { mkdirs() }
-        val outputFile = File(cacheDir, "reward_${System.currentTimeMillis()}.glb")
+        val promptHash = prompt.hashCode().toUInt().toString(16)
+        val outputFile = File(cacheDir, "reward_${promptHash}.glb")
 
         val url = URL(urlString)
         val connection = url.openConnection() as HttpURLConnection
@@ -155,6 +183,14 @@ object TripoClient {
         }
 
         return outputFile
+    }
+
+    private fun getCachedFile(prompt: String): File? {
+        val context = appContext ?: return null
+        val cacheDir = File(context.cacheDir, "tripo_models").apply { mkdirs() }
+        val promptHash = prompt.hashCode().toUInt().toString(16)
+        val file = File(cacheDir, "reward_${promptHash}.glb")
+        return if (file.exists() && file.length() > 0) file else null
     }
 
     private fun getOrCreateFallback(): MeshResource {

@@ -13,6 +13,7 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 val tripApiToken: String = localProperties.getProperty("TRIPO_API_TOKEN", "")
+val tripApiEndpoint: String = localProperties.getProperty("TRIPO_API_ENDPOINT", "https://openapi.tripo3d.ai/v3")
 
 android {
     namespace = "com.roomhero.app"
@@ -31,6 +32,7 @@ android {
         androidResources { noCompress += listOf(".bundle", ".ktx") }
 
         buildConfigField("String", "TRIPO_API_TOKEN", "\"$tripApiToken\"")
+        buildConfigField("String", "TRIPO_API_ENDPOINT", "\"$tripApiEndpoint\"")
     }
 
     buildTypes {
