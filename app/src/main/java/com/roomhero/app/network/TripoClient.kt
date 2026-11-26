@@ -40,6 +40,10 @@ object TripoClient {
 
     fun init(context: Context) {
         appContext = context.applicationContext
+        // 优先从 local.properties 注入的 BuildConfig 读取 token
+        if (apiToken.isNullOrBlank()) {
+            apiToken = com.roomhero.app.BuildConfig.TRIPO_API_TOKEN
+        }
     }
 
     fun setToken(token: String) {

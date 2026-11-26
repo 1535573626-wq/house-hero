@@ -1,8 +1,18 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
 }
+
+// 从 local.properties 读取 Tripo token，避免把敏感信息写进代码或 Git
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+val tripApiToken: String = localProperties.getProperty("TRIPO_API_TOKEN", "")
 
 android {
     namespace = "com.roomhero.app"
@@ -19,6 +29,8 @@ android {
         vectorDrawables { useSupportLibrary = true }
         ndk { abiFilters.add("arm64-v8a") }
         androidResources { noCompress += listOf(".bundle", ".ktx") }
+
+        buildConfigField("String", "TRIPO_API_TOKEN", "\"$tripApiToken\"")
     }
 
     buildTypes {
@@ -39,6 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
