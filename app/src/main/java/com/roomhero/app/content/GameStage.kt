@@ -25,6 +25,7 @@ import com.roomhero.app.manager.RewardManager
 import com.roomhero.app.manager.RoomSurfaceManager
 import com.roomhero.app.manager.VacuumManager
 import com.roomhero.app.viewmodel.AppMode
+import com.roomhero.app.viewmodel.GamePhase
 import com.roomhero.app.viewmodel.GameStateManager
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -77,10 +78,34 @@ private fun MainStageContent() {
 
 private val AnimationDt = 1f / 60f
 
+/**
+ * 处理手部捏合“确认”事件。
+ *
+ * - Ready 阶段：捏合 = 开始游戏
+ * - Playing 阶段：仅家具模式且正抓取时，捏合 = 放下家具
+ * - Finished 阶段：捏合 = 再玩一次
+ */
+private fun processHandClick() {
+    if (!HandTrackingManager.onPinchDown) return
+
+    val state = GameStateManager.gameState.value
+    when (state.phase) {
+        GamePhase.Ready -> GameStateManager.startGame()
+        GamePhase.Playing -> {
+            if (state.mode == AppMode.Furniture && FurnitureManager.isGrabbing()) {
+                FurnitureManager.release()
+            }
+        }
+        GamePhase.Finished -> GameStateManager.reset()
+        else -> {}
+    }
+}
+
 @Composable
 private fun CleanModeStage() {
     SpatialView(
         update = { _, _ ->
+            processHandClick()
             FeedbackManager.updateAnimations(AnimationDt)
             RewardManager.update(AnimationDt)
         },
@@ -146,6 +171,7 @@ private fun CleanModeStage() {
 private fun OrganizeModeStage() {
     SpatialView(
         update = { _, _ ->
+            processHandClick()
             FeedbackManager.updateAnimations(AnimationDt)
             RewardManager.update(AnimationDt)
         },
@@ -212,6 +238,7 @@ private fun OrganizeModeStage() {
 private fun FurnitureModeStage() {
     SpatialView(
         update = { _, _ ->
+            processHandClick()
             FeedbackManager.updateAnimations(AnimationDt)
             RewardManager.update(AnimationDt)
         },

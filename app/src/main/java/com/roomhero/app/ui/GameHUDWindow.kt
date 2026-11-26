@@ -16,6 +16,7 @@ import com.pico.spatial.ui.design.PicoTheme
 import com.pico.spatial.ui.design.Text
 import com.pico.spatial.ui.platform.containers.WindowContainerScope
 import com.roomhero.app.manager.FurnitureManager
+import com.roomhero.app.manager.HandTrackingManager
 import com.roomhero.app.manager.RewardManager
 import com.roomhero.app.viewmodel.AppMode
 import com.roomhero.app.viewmodel.GamePhase
@@ -50,7 +51,31 @@ fun WindowContainerScope.GameHUDWindow() {
                 AppMode.Organize -> OrganizeHUD(gameState)
                 AppMode.Furniture -> FurnitureHUD(gameState)
             }
+
+            HandGestureHint(gameState)
         }
+    }
+}
+
+@Composable
+private fun HandGestureHint(gameState: com.roomhero.app.viewmodel.GameState) {
+    if (!HandTrackingManager.isTracking) return
+
+    val hint = when (gameState.phase) {
+        GamePhase.Ready -> "👌 捏合右手开始游戏"
+        GamePhase.Playing -> {
+            if (gameState.mode == AppMode.Furniture && FurnitureManager.isGrabbing()) {
+                "👌 捏合右手放下家具"
+            } else {
+                null
+            }
+        }
+        GamePhase.Finished -> "👌 捏合右手再玩一次"
+        else -> null
+    }
+
+    hint?.let {
+        Text(text = it, fontSize = 20.sp)
     }
 }
 

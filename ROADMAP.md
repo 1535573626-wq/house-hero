@@ -15,7 +15,7 @@
 |---|---|---|
 | **Spatial Mesh / Plane Tracking** | 扫描真实地面、桌面，锚定彩带/物品/家具 | ✅ 已用 |
 | **HMD Tracking** | 头部前方固定光标（吸尘器/抓取点） | ✅ 已用 |
-| **Hand Tracking / Gesture** | 手势数据驱动吸尘器光标；SpatialUI 面板仍可用鼠标/手柄点击，后续补纯手势点击 | 🟡 数据层已做，UI 点击待补 |
+| **Hand Tracking / Gesture** | 捏合右手确认：Ready 开始游戏 / Furniture 抓起时放下 / Finished 重置 | ✅ 已用 |
 | **Spatial UI (WindowContainer / PicoTheme)** | 悬浮 HUD、模式选择、计时、分数、结束按钮 | ✅ 已用 |
 | **Spatial Audio** | 清洁成功、放置成功、游戏结束 3D 音效 | ✅ 已用 |
 | **Physics (RigidBody/Collision)** | 自由摆放家具模式：抓起、释放、重力碰撞 | ✅ 已用 |
@@ -33,7 +33,7 @@
 |---|---|---|
 | 创新性：把无聊家务游戏化 | ✅ | 清洁+整理+摆家具三合一 |
 | 深度使用 Spatial SDK | 🟡 | 已用核心能力，ML/Anchor/Video 还没 |
-| 手势追踪交互 | 🟡 | 手部位置已驱动光标，面板纯手势点击尚未实现 |
+| 手势追踪交互 | ✅ | 捏合确认已覆盖 Ready/Playing(Furniture)/Finished 阶段 |
 | 真实空间理解（mesh/平面/语义） | ✅ | 地面/桌面检测 |
 | 物理模拟与真实环境结合 | ✅ | Furniture 模式 |
 | AI/ML 能力（SpatialML + Tripo） | 🟡 | Sense Mesh 语义已用；SecureMR 自定义模型 + Tripo token 待补 |
