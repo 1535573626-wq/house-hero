@@ -149,8 +149,12 @@ object OrganizeManager {
                 if (horizontalDistance(cursorPos, targetPos) <= PLACE_RADIUS) {
                     item.isPlaced = true
                     item.isGrabbed = false
-                    item.currentEntity.enabled = false
-                    item.targetEntity.enabled = false
+                    // 对齐到目标框并播放音效
+                    item.currentEntity.components[TransformComponent::class.java]?.position = targetPos
+                    FeedbackManager.playPlaceSuccess(targetPos)
+                    FeedbackManager.fadeOutEntity(item.currentEntity)
+                    FeedbackManager.fadeOutEntity(item.targetEntity)
+                    items.remove(item)
                     placed++
                 }
             }

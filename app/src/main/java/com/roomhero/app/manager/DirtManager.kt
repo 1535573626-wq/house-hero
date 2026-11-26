@@ -106,7 +106,8 @@ object DirtManager {
             val piece = iterator.next()
             val piecePos = piece.components[TransformComponent::class.java]?.position ?: continue
             if (horizontalDistance(piecePos, position) <= radius) {
-                piece.enabled = false
+                FeedbackManager.playCleanSuccess(piecePos)
+                FeedbackManager.fadeOutEntity(piece)
                 iterator.remove()
                 cleaned++
             }

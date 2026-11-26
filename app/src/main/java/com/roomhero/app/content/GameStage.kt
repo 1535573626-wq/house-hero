@@ -13,6 +13,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.pico.spatial.ui.foundation.content.SpatialView
 import com.roomhero.app.manager.DirtManager
+import com.roomhero.app.manager.FeedbackManager
 import com.roomhero.app.manager.OrganizeManager
 import com.roomhero.app.manager.RoomSurfaceManager
 import com.roomhero.app.manager.VacuumManager
@@ -60,9 +61,14 @@ private fun MainStageContent() {
     }
 }
 
+private val AnimationDt = 1f / 60f
+
 @Composable
 private fun CleanModeStage() {
     SpatialView(
+        update = { _, _ ->
+            FeedbackManager.updateAnimations(AnimationDt)
+        },
         initial = { content, _ ->
             content.addEntity(DirtManager.root)
             content.addEntity(VacuumManager.root)
@@ -89,10 +95,14 @@ private fun CleanModeStage() {
 
                 launch {
                     while (isActive) {
-                        val state = GameStateManager.gameState.value
-                        if (state.isPlaying && state.timeRemaining > 0) {
+                        val previous = GameStateManager.gameState.value
+                        if (previous.isPlaying && previous.timeRemaining > 0) {
                             delay(1000)
                             GameStateManager.tick()
+                            val current = GameStateManager.gameState.value
+                            if (!previous.isFinished && current.isFinished) {
+                                FeedbackManager.playFinish(VacuumManager.currentPosition)
+                            }
                         } else {
                             delay(100)
                         }
@@ -110,6 +120,9 @@ private fun CleanModeStage() {
 @Composable
 private fun OrganizeModeStage() {
     SpatialView(
+        update = { _, _ ->
+            FeedbackManager.updateAnimations(AnimationDt)
+        },
         initial = { content, _ ->
             content.addEntity(OrganizeManager.root)
             content.addEntity(VacuumManager.root)
@@ -136,10 +149,14 @@ private fun OrganizeModeStage() {
 
                 launch {
                     while (isActive) {
-                        val state = GameStateManager.gameState.value
-                        if (state.isPlaying && state.timeRemaining > 0) {
+                        val previous = GameStateManager.gameState.value
+                        if (previous.isPlaying && previous.timeRemaining > 0) {
                             delay(1000)
                             GameStateManager.tick()
+                            val current = GameStateManager.gameState.value
+                            if (!previous.isFinished && current.isFinished) {
+                                FeedbackManager.playFinish(VacuumManager.currentPosition)
+                            }
                         } else {
                             delay(100)
                         }

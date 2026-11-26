@@ -44,6 +44,7 @@ data class GameState(
     val completedTargets: Int = 0,
 ) {
     val isPlaying: Boolean get() = phase == GamePhase.Playing
+    val isFinished: Boolean get() = phase == GamePhase.Finished
     val progressPercent: Int
         get() = if (totalTargets > 0) (completedTargets * 100 / totalTargets) else 0
 }
