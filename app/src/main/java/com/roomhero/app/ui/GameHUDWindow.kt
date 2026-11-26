@@ -5,9 +5,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -17,6 +19,8 @@ import com.pico.spatial.ui.design.Button
 import com.pico.spatial.ui.design.PicoTheme
 import com.pico.spatial.ui.design.Text
 import com.pico.spatial.ui.platform.containers.WindowContainerScope
+import com.roomhero.app.manager.Achievement
+import com.roomhero.app.manager.AchievementManager
 import com.roomhero.app.manager.FurnitureManager
 import com.roomhero.app.manager.HandTrackingManager
 import com.roomhero.app.manager.PerformanceManager
@@ -35,6 +39,7 @@ fun WindowContainerScope.GameHUDWindow() {
     val gameState by GameStateManager.gameState.collectAsState()
     val fps by PerformanceManager.fps.collectAsState()
     val entityCount by PerformanceManager.entityCount.collectAsState()
+    val newUnlocks by AchievementManager.newUnlocks.collectAsState()
     val scope = rememberCoroutineScope()
 
     PicoTheme {
@@ -59,6 +64,7 @@ fun WindowContainerScope.GameHUDWindow() {
             }
 
             HandGestureHint(gameState)
+            AchievementToast(newUnlocks, gameState.phase == GamePhase.Finished)
 
             Text(
                 text = "FPS: $fps | Entities: $entityCount",
@@ -223,6 +229,29 @@ private fun FurnitureHUD(
             Button(onClick = { GameStateManager.reset() }) {
                 Text(text = "再玩一次", fontSize = 28.sp)
             }
+        }
+    }
+}
+
+@Composable
+private fun AchievementToast(newUnlocks: List<Achievement>, visible: Boolean) {
+    if (!visible || newUnlocks.isEmpty()) return
+
+    LaunchedEffect(newUnlocks) {
+        delay(5000)
+        AchievementManager.consumeNewUnlocks()
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(top = 16.dp),
+    ) {
+        Text(text = "新成就解锁", fontSize = 28.sp)
+        newUnlocks.forEach { achievement ->
+            Text(
+                text = "${achievement.title} — ${achievement.description}",
+                fontSize = 20.sp,
+            )
         }
     }
 }

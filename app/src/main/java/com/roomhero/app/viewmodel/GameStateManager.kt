@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
-private const val GAME_DURATION_SECONDS = 60
+internal const val GAME_DURATION_SECONDS = 60
 
 /**
  * 应用模式。
@@ -86,6 +86,15 @@ object GameStateManager {
     fun startGame() {
         _gameState.update { current ->
             current.copy(phase = GamePhase.Playing)
+        }
+    }
+
+    /**
+     * 提前结束当前游戏（例如所有目标已完成）。
+     */
+    fun finishGame() {
+        _gameState.update { current ->
+            current.copy(phase = GamePhase.Finished)
         }
     }
 

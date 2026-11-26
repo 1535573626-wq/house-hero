@@ -16,6 +16,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.pico.spatial.ui.foundation.content.SpatialView
 import com.pico.spatial.ui.platform.containers.openWindowContainer
+import com.roomhero.app.manager.AchievementManager
 import com.roomhero.app.manager.DirtManager
 import com.roomhero.app.manager.FeedbackManager
 import com.roomhero.app.manager.FurnitureAnchorManager
@@ -27,6 +28,7 @@ import com.roomhero.app.manager.RewardManager
 import com.roomhero.app.manager.RoomSurfaceManager
 import com.roomhero.app.manager.VacuumManager
 import com.roomhero.app.viewmodel.AppMode
+import com.roomhero.app.viewmodel.GAME_DURATION_SECONDS
 import com.roomhero.app.viewmodel.GamePhase
 import com.roomhero.app.viewmodel.GameStateManager
 import kotlinx.coroutines.coroutineScope
@@ -132,6 +134,9 @@ private fun CleanModeStage() {
                             val cleaned = DirtManager.cleanAt(vacuumPos, radius = 0.25f)
                             if (cleaned > 0) {
                                 GameStateManager.addScore(cleaned)
+                                if (DirtManager.remainingCount() == 0) {
+                                    GameStateManager.finishGame()
+                                }
                             }
                         }
                         delay(50)
@@ -152,6 +157,14 @@ private fun CleanModeStage() {
                                     progress = current.progressPercent,
                                     hmdPosition = VacuumManager.currentPosition,
                                     floorY = surface.floorY,
+                                )
+                                val elapsed = GAME_DURATION_SECONDS - current.timeRemaining
+                                AchievementManager.onGameFinished(
+                                    mode = AppMode.Clean,
+                                    score = current.score,
+                                    progressPercent = current.progressPercent,
+                                    elapsedSeconds = elapsed,
+                                    completedCount = current.completedTargets,
                                 )
                             }
                         } else {
@@ -199,6 +212,9 @@ private fun OrganizeModeStage() {
                             val organized = OrganizeManager.checkPlacement(cursorPos)
                             if (organized > 0) {
                                 GameStateManager.addScore(organized)
+                                if (OrganizeManager.remainingCount() == 0) {
+                                    GameStateManager.finishGame()
+                                }
                             }
                         }
                         delay(50)
@@ -219,6 +235,14 @@ private fun OrganizeModeStage() {
                                     progress = current.progressPercent,
                                     hmdPosition = VacuumManager.currentPosition,
                                     floorY = surface.position.y,
+                                )
+                                val elapsed = GAME_DURATION_SECONDS - current.timeRemaining
+                                AchievementManager.onGameFinished(
+                                    mode = AppMode.Organize,
+                                    score = current.score,
+                                    progressPercent = current.progressPercent,
+                                    elapsedSeconds = elapsed,
+                                    completedCount = current.completedTargets,
                                 )
                             }
                         } else {
@@ -281,6 +305,7 @@ private fun FurnitureModeStage() {
                             if (!previous.isFinished && current.isFinished) {
                                 FeedbackManager.playFinish(VacuumManager.currentPosition)
                                 FurnitureAnchorManager.saveLayout(FurnitureManager.snapshot())
+                                AchievementManager.onFurnitureLayoutSaved()
                                 RewardManager.prepare(
                                     score = current.score,
                                     progress = current.progressPercent,
