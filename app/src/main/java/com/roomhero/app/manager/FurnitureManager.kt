@@ -232,6 +232,8 @@ object FurnitureManager {
 
     fun isGrabbing(): Boolean = items.any { it.isGrabbed }
 
+    fun itemCount(): Int = items.size
+
     fun reset() {
         items.forEach { it.entity.destroy() }
         items.clear()

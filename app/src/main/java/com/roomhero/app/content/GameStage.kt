@@ -22,6 +22,7 @@ import com.roomhero.app.manager.FurnitureAnchorManager
 import com.roomhero.app.manager.FurnitureManager
 import com.roomhero.app.manager.HandTrackingManager
 import com.roomhero.app.manager.OrganizeManager
+import com.roomhero.app.manager.PerformanceManager
 import com.roomhero.app.manager.RewardManager
 import com.roomhero.app.manager.RoomSurfaceManager
 import com.roomhero.app.manager.VacuumManager
@@ -107,6 +108,7 @@ private fun CleanModeStage() {
     SpatialView(
         update = { _, _ ->
             processHandClick()
+            PerformanceManager.onFrame()
             FeedbackManager.updateAnimations(AnimationDt)
             RewardManager.update(AnimationDt)
         },
@@ -173,6 +175,7 @@ private fun OrganizeModeStage() {
     SpatialView(
         update = { _, _ ->
             processHandClick()
+            PerformanceManager.onFrame()
             FeedbackManager.updateAnimations(AnimationDt)
             RewardManager.update(AnimationDt)
         },
@@ -240,6 +243,7 @@ private fun FurnitureModeStage() {
     SpatialView(
         update = { _, _ ->
             processHandClick()
+            PerformanceManager.onFrame()
             FeedbackManager.updateAnimations(AnimationDt)
             RewardManager.update(AnimationDt)
         },

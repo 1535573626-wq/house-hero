@@ -137,6 +137,8 @@ object RewardManager {
         lastFloorY = 0f
     }
 
+    fun activeCount(): Int = rewards.size
+
     private fun rankFromProgress(progress: Int): Rank {
         return when {
             progress >= 90 -> Rank.GOLD

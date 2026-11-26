@@ -17,6 +17,7 @@ import com.pico.spatial.ui.design.Text
 import com.pico.spatial.ui.platform.containers.WindowContainerScope
 import com.roomhero.app.manager.FurnitureManager
 import com.roomhero.app.manager.HandTrackingManager
+import com.roomhero.app.manager.PerformanceManager
 import com.roomhero.app.manager.RewardManager
 import com.roomhero.app.viewmodel.AppMode
 import com.roomhero.app.viewmodel.GamePhase
@@ -30,6 +31,8 @@ import com.roomhero.app.viewmodel.GameStateManager
 @Composable
 fun WindowContainerScope.GameHUDWindow() {
     val gameState by GameStateManager.gameState.collectAsState()
+    val fps by PerformanceManager.fps.collectAsState()
+    val entityCount by PerformanceManager.entityCount.collectAsState()
 
     PicoTheme {
         Column(
@@ -53,6 +56,11 @@ fun WindowContainerScope.GameHUDWindow() {
             }
 
             HandGestureHint(gameState)
+
+            Text(
+                text = "FPS: $fps | Entities: $entityCount",
+                fontSize = 16.sp,
+            )
         }
     }
 }

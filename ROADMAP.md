@@ -32,13 +32,13 @@
 | 加分项 | 当前对齐 | 备注 |
 |---|---|---|
 | 创新性：把无聊家务游戏化 | ✅ | 清洁+整理+摆家具三合一 |
-| 深度使用 Spatial SDK | 🟡 | 已用核心能力，ML/Anchor/Video 还没 |
+| 深度使用 Spatial SDK | 🟡 | 核心能力+Mesh语义+Anchor+粒子已用；SecureMR 自定义模型+Video待补 |
 | 手势追踪交互 | ✅ | 捏合确认已覆盖 Ready/Playing(Furniture)/Finished 阶段 |
 | 真实空间理解（mesh/平面/语义） | ✅ | 地面/桌面检测 |
 | 物理模拟与真实环境结合 | ✅ | Furniture 模式 |
 | AI/ML 能力（SpatialML + Tripo） | 🟡 | Sense Mesh 语义已用；SecureMR 自定义模型 + Tripo token 待补 |
 | 完整 UX 流程（开始→游戏→结束→奖励） | 🟡 | 流程通，但奖励是本地占位模型 |
-| 性能优化 / 压榨硬件 | ⬜ | 尚未专门做 |
+| 性能优化 / 压榨硬件 | 🟡 | FPS/实体计数 HUD、彩带数量上限已做；真机 LOD 待测 |
 | 可扩展性 / 商业潜力 | 🟡 | 思路有，需包装 |
 
 ## 4. 当前已完成的模块
@@ -52,6 +52,8 @@
 - [x] FurnitureAnchorManager：SharedPreferences + WorldTrackingManager 空间锚点保存/恢复家具布局
 - [x] VacuumManager：HMD 前方光标，跟随头部移动
 - [x] FeedbackManager：空间音效 + 缩放消失动画 + 游戏结束彩带雨粒子
+- [x] PerformanceManager：FPS 与活跃实体数统计，HUD 实时显示
+- [x] DirtManager：派对彩带 + 超大房间自动限制数量（MAX 200）
 - [x] GameStateManager：阶段机（Scanning / Ready / Playing / Finished）+ 计分/倒计时
 - [x] GameHUDWindow：SpatialUI 悬浮面板，显示模式选择、计时、分数、进度
 - [x] RewardManager：游戏结束后按分数生成 1~3 个旋转浮动的 3D 奖杯（本地五角星占位）

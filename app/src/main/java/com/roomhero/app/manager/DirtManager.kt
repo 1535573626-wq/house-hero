@@ -15,6 +15,7 @@ private const val CONFETTI_WIDTH = 0.26f
 private const val CONFETTI_DEPTH = 0.08f
 private const val CONFETTI_SPACING = 0.06f
 private const val CONFETTI_HEIGHT_OFFSET = 0.008f
+private const val MAX_DIRT_PIECES = 200
 
 /**
  * 管理地面上的彩带纸屑。
@@ -64,8 +65,16 @@ object DirtManager {
 
         val width = surface.bounds.x
         val depth = surface.bounds.y
-        val countX = ((width - CONFETTI_SPACING) / (CONFETTI_WIDTH + CONFETTI_SPACING)).toInt().coerceAtLeast(1)
-        val countZ = ((depth - CONFETTI_SPACING) / (CONFETTI_DEPTH + CONFETTI_SPACING)).toInt().coerceAtLeast(1)
+        var countX = ((width - CONFETTI_SPACING) / (CONFETTI_WIDTH + CONFETTI_SPACING)).toInt().coerceAtLeast(1)
+        var countZ = ((depth - CONFETTI_SPACING) / (CONFETTI_DEPTH + CONFETTI_SPACING)).toInt().coerceAtLeast(1)
+
+        // 限制总彩带数量，避免超大房间拖垮性能
+        val requestedCount = countX * countZ
+        if (requestedCount > MAX_DIRT_PIECES) {
+            val ratio = kotlin.math.sqrt(MAX_DIRT_PIECES.toFloat() / requestedCount)
+            countX = (countX * ratio).toInt().coerceAtLeast(1)
+            countZ = (countZ * ratio).toInt().coerceAtLeast(1)
+        }
 
         val offsetX = (countX - 1) * (CONFETTI_WIDTH + CONFETTI_SPACING) / 2f
         val offsetZ = (countZ - 1) * (CONFETTI_DEPTH + CONFETTI_SPACING) / 2f
