@@ -36,12 +36,13 @@ data class FloorSurface(
 /**
  * 房间表面管理器。
  *
- * 负责启动 [PlaneTrackingManager] 并收集地面（FLOOR）平面。
- * 提供 [awaitFloor] 在超时后返回 fallback 虚拟地面，保证无真机/Emulator 也能跑。
+ * 负责启动 [PlaneTrackingManager] 并收集地面（FLOOR）/桌面（TABLE）平面。
+ * 提供 [awaitFloor] / [awaitTable] 在超时后返回 fallback 表面，保证无真机/Emulator 也能跑。
  */
 object RoomSurfaceManager {
 
     private val floorAnchors = mutableMapOf<UUID, PlaneAnchor>()
+    private val tableAnchors = mutableMapOf<UUID, PlaneAnchor>()
     private var subscription: Cancellable? = null
 
     /**
@@ -56,12 +57,15 @@ object RoomSurfaceManager {
             when (event.event) {
                 AnchorUpdate.Event.ADDED,
                 AnchorUpdate.Event.UPDATED -> {
-                    if (anchor.semantics == SemanticLabelType.FLOOR) {
-                        floorAnchors[anchor.anchorUUID] = anchor
+                    when (anchor.semantics) {
+                        SemanticLabelType.FLOOR -> floorAnchors[anchor.anchorUUID] = anchor
+                        SemanticLabelType.TABLE -> tableAnchors[anchor.anchorUUID] = anchor
+                        else -> {}
                     }
                 }
                 AnchorUpdate.Event.REMOVED -> {
                     floorAnchors.remove(anchor.anchorUUID)
+                    tableAnchors.remove(anchor.anchorUUID)
                 }
                 else -> {}
             }
@@ -76,6 +80,7 @@ object RoomSurfaceManager {
         subscription?.cancel()
         subscription = null
         floorAnchors.clear()
+        tableAnchors.clear()
         PlaneTrackingManager.stop()
     }
 
@@ -98,12 +103,33 @@ object RoomSurfaceManager {
     }
 
     /**
+     * 等待检测到桌面平面，[timeoutMillis] 内未检测到则返回 fallback 虚拟桌面。
+     */
+    suspend fun awaitTable(timeoutMillis: Long = 5000L): FloorSurface {
+        start()
+
+        val detected: FloorSurface? = withTimeoutOrNull(timeoutMillis) {
+            var table: FloorSurface? = null
+            while (table == null) {
+                table = pickBestTable()
+                if (table == null) delay(200L)
+            }
+            table
+        }
+
+        return detected ?: createFallbackTable()
+    }
+
+    /**
      * 当前已缓存的真实地面数量。
      */
     fun floorCount(): Int = floorAnchors.size
 
-    private fun pickBestFloor(): FloorSurface? {
-        val anchor = floorAnchors.values.maxByOrNull {
+    private fun pickBestFloor(): FloorSurface? = pickBestSurface(floorAnchors)
+    private fun pickBestTable(): FloorSurface? = pickBestSurface(tableAnchors)
+
+    private fun pickBestSurface(anchors: Map<UUID, PlaneAnchor>): FloorSurface? {
+        val anchor = anchors.values.maxByOrNull {
             it.boundingBoxSize.x * it.boundingBoxSize.y
         } ?: return null
         return FloorSurface(
@@ -121,6 +147,16 @@ object RoomSurfaceManager {
             position = Vector3(0f, 0f, 0f),
             rotation = Quat.identity(),
             bounds = Vector2(4f, 4f),
+            isFallback = true,
+        )
+    }
+
+    private fun createFallbackTable(): FloorSurface {
+        return FloorSurface(
+            anchorUUID = null,
+            position = Vector3(0f, 0.8f, 0f),
+            rotation = Quat.identity(),
+            bounds = Vector2(1.5f, 1f),
             isFallback = true,
         )
     }

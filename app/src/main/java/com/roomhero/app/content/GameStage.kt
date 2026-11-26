@@ -13,8 +13,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.pico.spatial.ui.foundation.content.SpatialView
 import com.roomhero.app.manager.DirtManager
+import com.roomhero.app.manager.OrganizeManager
 import com.roomhero.app.manager.RoomSurfaceManager
 import com.roomhero.app.manager.VacuumManager
+import com.roomhero.app.viewmodel.AppMode
 import com.roomhero.app.viewmodel.GameStateManager
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -51,19 +53,26 @@ fun GameStage() {
 
 @Composable
 private fun MainStageContent() {
+    val mode = GameStateManager.gameState.value.mode
+    when (mode) {
+        AppMode.Clean -> CleanModeStage()
+        AppMode.Organize -> OrganizeModeStage()
+    }
+}
+
+@Composable
+private fun CleanModeStage() {
     SpatialView(
         initial = { content, _ ->
             content.addEntity(DirtManager.root)
             content.addEntity(VacuumManager.root)
 
-            // 扫描地面并生成彩带，但不自动开始计时
             val surface = RoomSurfaceManager.awaitFloor(timeoutMillis = 5000L)
             DirtManager.spawnDirtGrid(surface)
             VacuumManager.start()
             GameStateManager.setReady(DirtManager.totalCount())
 
             coroutineScope {
-                // 清洁循环：每 50ms 检查一次吸尘器与彩带的距离
                 launch {
                     while (isActive) {
                         val state = GameStateManager.gameState.value
@@ -78,7 +87,6 @@ private fun MainStageContent() {
                     }
                 }
 
-                // 计时循环：每秒倒计时
                 launch {
                     while (isActive) {
                         val state = GameStateManager.gameState.value
@@ -93,6 +101,53 @@ private fun MainStageContent() {
             }
 
             DirtManager.reset()
+            VacuumManager.stop()
+            RoomSurfaceManager.stop()
+        }
+    )
+}
+
+@Composable
+private fun OrganizeModeStage() {
+    SpatialView(
+        initial = { content, _ ->
+            content.addEntity(OrganizeManager.root)
+            content.addEntity(VacuumManager.root)
+
+            val surface = RoomSurfaceManager.awaitTable(timeoutMillis = 5000L)
+            OrganizeManager.spawnItems(surface)
+            VacuumManager.start()
+            GameStateManager.setReady(OrganizeManager.totalCount())
+
+            coroutineScope {
+                launch {
+                    while (isActive) {
+                        val state = GameStateManager.gameState.value
+                        if (state.isPlaying) {
+                            val cursorPos = VacuumManager.currentPosition
+                            val organized = OrganizeManager.checkPlacement(cursorPos)
+                            if (organized > 0) {
+                                GameStateManager.addScore(organized)
+                            }
+                        }
+                        delay(50)
+                    }
+                }
+
+                launch {
+                    while (isActive) {
+                        val state = GameStateManager.gameState.value
+                        if (state.isPlaying && state.timeRemaining > 0) {
+                            delay(1000)
+                            GameStateManager.tick()
+                        } else {
+                            delay(100)
+                        }
+                    }
+                }
+            }
+
+            OrganizeManager.reset()
             VacuumManager.stop()
             RoomSurfaceManager.stop()
         }
