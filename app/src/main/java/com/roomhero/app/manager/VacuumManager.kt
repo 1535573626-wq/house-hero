@@ -8,7 +8,6 @@ import com.pico.spatial.core.ecs.resource.PhysicallyBasedMaterial
 import com.pico.spatial.core.math.Color4
 import com.pico.spatial.core.math.Vector3
 import com.pico.spatial.tracking.hmd.HMDTrackingProvider
-import com.pico.spatial.ui.foundation.content.SpatialContent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,7 +42,7 @@ object VacuumManager {
     /**
      * 初始化吸尘器可视化模型并启动位置更新。
      */
-    fun start(content: SpatialContent) {
+    fun start() {
         stop()
 
         val mesh = MeshResource.createSphere(0.08f)

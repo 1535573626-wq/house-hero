@@ -80,8 +80,8 @@ private fun MainStageContent(viewModel: GameViewModel) {
             content.addEntity(DirtManager.root)
             content.addEntity(VacuumManager.root)
 
-            DirtManager.spawnDirtGrid(content)
-            VacuumManager.start(content)
+            DirtManager.spawnDirtGrid()
+            VacuumManager.start()
 
             coroutineScope {
                 // 清洁循环：每 50ms 检查一次吸尘器与污渍的距离

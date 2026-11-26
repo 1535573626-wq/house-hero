@@ -7,7 +7,6 @@ import com.pico.spatial.core.ecs.resource.MeshResource
 import com.pico.spatial.core.ecs.resource.PhysicallyBasedMaterial
 import com.pico.spatial.core.math.Color4
 import com.pico.spatial.core.math.Vector3
-import com.pico.spatial.ui.foundation.content.SpatialContent
 
 private const val GRID_SIZE_X = 10
 private const val GRID_SIZE_Z = 10
@@ -34,7 +33,7 @@ object DirtManager {
     /**
      * 在地面生成网格状污渍。
      */
-    fun spawnDirtGrid(content: SpatialContent) {
+    fun spawnDirtGrid() {
         reset()
 
         val mesh = MeshResource.createPlane(TILE_SIZE, TILE_SIZE, 0f)

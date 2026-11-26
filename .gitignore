@@ -32,3 +32,28 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# >>> pico-cli managed: do not edit >>>
+/.cursor/skills/pico-spatial-app-designer/
+/.cursor/skills/porting-android-app/
+/.cursor/skills/spatial-accessibility/
+/.cursor/skills/spatial-app-dev-workflow/
+/.cursor/skills/spatial-app-onboarding/
+/.cursor/skills/spatial-app-performance-analysis/
+/.cursor/skills/spatial-app-performance-workflow/
+/.cursor/skills/spatial-bundle-scene-reader/
+/.cursor/skills/spatial-design-to-app/
+/.cursor/skills/spatial-editor/
+/.cursor/skills/spatial-sdk-guideline/
+/.cursor/skills/spatial-sdk-scene-builder/
+/.cursor/skills/spatial-sdk-update/
+/.cursor/skills/spatial-ui-ability/
+/.cursor/skills/spatial-ui-design-style/
+/.cursor/skills/spatialml-debugging/
+/.cursor/skills/spatialml/
+/.cursor/skills/threejs-to-spatial/
+/PICO-SPATIAL-AGENTIC-TOOLS.AGENTS.md
+/.pico-env.json
+/.pico/
+/.pico-setup-resources.*.tmp/
+# <<< pico-cli managed <<<

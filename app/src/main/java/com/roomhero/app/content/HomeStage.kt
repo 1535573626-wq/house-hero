@@ -18,7 +18,6 @@ import com.pico.spatial.core.math.Vector3
 import com.roomhero.app.R
 import com.pico.spatial.ui.design.PicoTheme
 import com.pico.spatial.ui.design.Text
-import com.pico.spatial.ui.foundation.content.SpatialView
 import com.pico.spatial.ui.foundation.material.backgroundMaterial
 import com.pico.spatial.ui.platform.Material
 

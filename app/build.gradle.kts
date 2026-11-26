@@ -6,17 +6,19 @@ plugins {
 
 android {
     namespace = "com.roomhero.app"
-    compileSdk = 37
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.roomhero.app"
-        minSdk = 35
-        targetSdk = 37
+        minSdk = 26
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables { useSupportLibrary = true }
         ndk { abiFilters.add("arm64-v8a") }
+        androidResources { noCompress += listOf(".bundle", ".ktx") }
     }
 
     buildTypes {
@@ -48,11 +50,11 @@ dependencies {
     implementation(platform(libs.spatial.bom))
     implementation(libs.spatial.core)
     implementation(libs.spatial.foundation)
+    implementation(libs.spatial.ui.tracking)
+    implementation(libs.spatial.ui.sense)
     implementation(libs.spatial.ui.platform)
     implementation(libs.spatial.ui.foundation)
     implementation(libs.spatial.ui.design)
-    implementation(libs.spatial.ui.sense)
-    implementation(libs.spatial.ui.tracking)
     implementation(libs.androidx.ui.tooling)
     implementation(libs.androidx.annotation)
     implementation(libs.androidx.appcompat)
@@ -62,4 +64,11 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling.preview)
 }
 
-
+configurations.all {
+    resolutionStrategy {
+        exclude("androidx.compose.ui", "ui")
+        exclude("androidx.compose.ui", "ui-graphics")
+        exclude("androidx.compose.ui", "ui-text")
+        exclude("androidx.compose.foundation", "foundation")
+    }
+}
