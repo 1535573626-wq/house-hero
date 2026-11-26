@@ -25,6 +25,7 @@ spatial-ui-foundation = { group = "com.pico.spatial.ui", name = "foundation" }
 spatial-ui-design = { group = "com.pico.spatial.ui", name = "design" }
 spatial-ui-sense = { group = "com.pico.spatial.sense", name = "sense" }
 spatial-ui-tracking = { group = "com.pico.spatial.tracking", name = "tracking" }
+spatial-ml-securemr = { group = "com.pico.spatial.ml", name = "securemr" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-annotation = { group = "androidx.annotation", name = "annotation", version.ref = "annotation" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }

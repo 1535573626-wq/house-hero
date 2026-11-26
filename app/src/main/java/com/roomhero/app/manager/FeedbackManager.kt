@@ -29,14 +29,17 @@ object FeedbackManager {
     )
 
     /**
-     * 在应用启动时初始化音频资源。
+     * 在应用启动时保存 Context，音频资源延迟到首次播放时加载。
+     *
+     * 必须在 Spatial SDK 初始化完成后再加载音频，否则 native 库未就绪会崩溃。
      */
     fun init(context: Context) {
         this.context = context.applicationContext
-        loadAudio()
     }
 
-    private fun loadAudio() {
+    private fun ensureAudioLoaded() {
+        if (successAudio != null || placeAudio != null || finishAudio != null) return
+
         try {
             successAudio = AudioResource.load("success", "success.wav", LoadType.FROM_ASSETS)
             placeAudio = AudioResource.load("place", "place.wav", LoadType.FROM_ASSETS)
@@ -68,6 +71,7 @@ object FeedbackManager {
     }
 
     private fun playSpatial(audio: AudioResource?, position: Vector3) {
+        ensureAudioLoaded()
         val resource = audio ?: return
         val entity = Entity().apply {
             components[TransformComponent::class.java]?.position = position

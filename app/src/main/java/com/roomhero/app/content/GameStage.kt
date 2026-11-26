@@ -1,21 +1,26 @@
 package com.roomhero.app.content
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.pico.spatial.ui.foundation.content.SpatialView
+import com.pico.spatial.ui.platform.containers.openWindowContainer
 import com.roomhero.app.manager.DirtManager
 import com.roomhero.app.manager.FeedbackManager
 import com.roomhero.app.manager.FurnitureManager
 import com.roomhero.app.manager.OrganizeManager
+import com.roomhero.app.manager.RewardManager
 import com.roomhero.app.manager.RoomSurfaceManager
 import com.roomhero.app.manager.VacuumManager
 import com.roomhero.app.viewmodel.AppMode
@@ -30,6 +35,12 @@ fun GameStage() {
     val sessionId by GameStateManager.sessionId.collectAsState()
     var hasPaused by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
+
+    // Stage 启动后自动打开 HUD 窗口
+    LaunchedEffect(Unit) {
+        context.openWindowContainer("HUD")
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -70,10 +81,12 @@ private fun CleanModeStage() {
     SpatialView(
         update = { _, _ ->
             FeedbackManager.updateAnimations(AnimationDt)
+            RewardManager.update(AnimationDt)
         },
         initial = { content, _ ->
             content.addEntity(DirtManager.root)
             content.addEntity(VacuumManager.root)
+            content.addEntity(RewardManager.root)
 
             val surface = RoomSurfaceManager.awaitFloor(timeoutMillis = 5000L)
             DirtManager.spawnDirtGrid(surface)
@@ -104,6 +117,12 @@ private fun CleanModeStage() {
                             val current = GameStateManager.gameState.value
                             if (!previous.isFinished && current.isFinished) {
                                 FeedbackManager.playFinish(VacuumManager.currentPosition)
+                                RewardManager.prepare(
+                                    score = current.score,
+                                    progress = current.progressPercent,
+                                    hmdPosition = VacuumManager.currentPosition,
+                                    floorY = surface.floorY,
+                                )
                             }
                         } else {
                             delay(100)
@@ -114,6 +133,7 @@ private fun CleanModeStage() {
 
             DirtManager.reset()
             VacuumManager.stop()
+            RewardManager.reset()
             RoomSurfaceManager.stop()
         }
     )
@@ -124,10 +144,12 @@ private fun OrganizeModeStage() {
     SpatialView(
         update = { _, _ ->
             FeedbackManager.updateAnimations(AnimationDt)
+            RewardManager.update(AnimationDt)
         },
         initial = { content, _ ->
             content.addEntity(OrganizeManager.root)
             content.addEntity(VacuumManager.root)
+            content.addEntity(RewardManager.root)
 
             val surface = RoomSurfaceManager.awaitTable(timeoutMillis = 5000L)
             OrganizeManager.spawnItems(surface)
@@ -158,6 +180,12 @@ private fun OrganizeModeStage() {
                             val current = GameStateManager.gameState.value
                             if (!previous.isFinished && current.isFinished) {
                                 FeedbackManager.playFinish(VacuumManager.currentPosition)
+                                RewardManager.prepare(
+                                    score = current.score,
+                                    progress = current.progressPercent,
+                                    hmdPosition = VacuumManager.currentPosition,
+                                    floorY = surface.position.y,
+                                )
                             }
                         } else {
                             delay(100)
@@ -168,6 +196,7 @@ private fun OrganizeModeStage() {
 
             OrganizeManager.reset()
             VacuumManager.stop()
+            RewardManager.reset()
             RoomSurfaceManager.stop()
         }
     )
@@ -179,10 +208,12 @@ private fun FurnitureModeStage() {
     SpatialView(
         update = { _, _ ->
             FeedbackManager.updateAnimations(AnimationDt)
+            RewardManager.update(AnimationDt)
         },
         initial = { content, _ ->
             content.addEntity(FurnitureManager.root)
             content.addEntity(VacuumManager.root)
+            content.addEntity(RewardManager.root)
 
             val surface = RoomSurfaceManager.awaitFloor(timeoutMillis = 5000L)
             FurnitureManager.spawnFurniture(surface)
@@ -210,6 +241,12 @@ private fun FurnitureModeStage() {
                             val current = GameStateManager.gameState.value
                             if (!previous.isFinished && current.isFinished) {
                                 FeedbackManager.playFinish(VacuumManager.currentPosition)
+                                RewardManager.prepare(
+                                    score = current.score,
+                                    progress = current.progressPercent,
+                                    hmdPosition = VacuumManager.currentPosition,
+                                    floorY = surface.floorY,
+                                )
                             }
                         } else {
                             delay(100)
@@ -220,6 +257,7 @@ private fun FurnitureModeStage() {
 
             FurnitureManager.reset()
             VacuumManager.stop()
+            RewardManager.reset()
             RoomSurfaceManager.stop()
         }
     )

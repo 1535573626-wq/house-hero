@@ -16,6 +16,7 @@ import com.pico.spatial.ui.design.PicoTheme
 import com.pico.spatial.ui.design.Text
 import com.pico.spatial.ui.platform.containers.WindowContainerScope
 import com.roomhero.app.manager.FurnitureManager
+import com.roomhero.app.manager.RewardManager
 import com.roomhero.app.viewmodel.AppMode
 import com.roomhero.app.viewmodel.GamePhase
 import com.roomhero.app.viewmodel.GameStateManager
@@ -100,6 +101,9 @@ private fun CleanHUD(gameState: com.roomhero.app.viewmodel.GameState) {
             Text(text = "时间到！", fontSize = 36.sp)
             Text(text = "最终得分: ${gameState.score}", fontSize = 32.sp)
             Text(text = "清洁率: ${gameState.progressPercent}%", fontSize = 28.sp)
+            Button(onClick = { RewardManager.spawnReward(gameState.score, gameState.progressPercent) }) {
+                Text(text = "生成 3D 奖励", fontSize = 28.sp)
+            }
             Button(onClick = { GameStateManager.reset() }) {
                 Text(text = "再玩一次", fontSize = 28.sp)
             }
@@ -131,6 +135,9 @@ private fun OrganizeHUD(gameState: com.roomhero.app.viewmodel.GameState) {
             Text(text = "时间到！", fontSize = 36.sp)
             Text(text = "最终得分: ${gameState.score}", fontSize = 32.sp)
             Text(text = "整理进度: ${gameState.progressPercent}%", fontSize = 28.sp)
+            Button(onClick = { RewardManager.spawnReward(gameState.score, gameState.progressPercent) }) {
+                Text(text = "生成 3D 奖励", fontSize = 28.sp)
+            }
             Button(onClick = { GameStateManager.reset() }) {
                 Text(text = "再玩一次", fontSize = 28.sp)
             }
@@ -165,6 +172,9 @@ private fun FurnitureHUD(gameState: com.roomhero.app.viewmodel.GameState) {
         GamePhase.Finished -> {
             Text(text = "时间到！", fontSize = 36.sp)
             Text(text = "最终得分: ${gameState.score}", fontSize = 32.sp)
+            Button(onClick = { RewardManager.spawnReward(gameState.score, gameState.progressPercent) }) {
+                Text(text = "生成 3D 奖励", fontSize = 28.sp)
+            }
             Button(onClick = { GameStateManager.reset() }) {
                 Text(text = "再玩一次", fontSize = 28.sp)
             }

@@ -25,12 +25,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- DefaultStage Configuration -->
+            <!-- GameStage Configuration -->
 
             <!-- The unique name/id of the Stage -->
             <meta-data
                 android:name="pico.spatial.stage.id"
-                android:value="DefaultStage" />
+                android:value="GameStage" />
 
             <!-- Stage style at launch
                  "0": StageStyle.Automatic, a system default setting, set to Mixed currently (default)
@@ -59,10 +59,10 @@
                 android:name="pico.spatial.stage.immersion_max"
                 android:value="100" />
 
-            <!-- DefaultWindowContainer Configuration -->
+            <!-- HUD WindowContainer Configuration -->
             <meta-data
                 android:name="pico.spatial.windowcontainer.id"
-                android:value="MainHUD" />
+                android:value="HUD" />
             <!-- WindowContainer form: 1 = Planar -->
             <meta-data
                 android:name="pico.spatial.windowcontainer.style"

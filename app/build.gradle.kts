@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.spatial.core)
     implementation(libs.spatial.foundation)
     implementation(libs.spatial.ui.tracking)
+    implementation(libs.spatial.ml.securemr)
     implementation(libs.spatial.ui.sense)
     implementation(libs.spatial.ui.platform)
     implementation(libs.spatial.ui.foundation)
