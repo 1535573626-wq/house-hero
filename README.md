@@ -65,7 +65,7 @@ app/src/main/java/com/roomhero/app/
 
 ## 待完成 / 阻塞项
 
-- [ ] **Tripo 3D 真实奖励模型** — 已留好 `TripoClient` 接口，拿到 token 后替换为真实 HTTP 调用即可
+- [ ] **Tripo 3D 真实奖励模型** — `TripoClient` 已接入 Tripo API 异步流程（创建任务→轮询→下载 GLB→加载 MeshResource），无 token 时自动 fallback 五角星，拿到 token 后 `TripoClient.setToken("...")` 即可
 - [ ] **真机验证** — Emulator 无法授予手部追踪权限，手部交互/SpatialML 效果需真机确认
 - [ ] **性能最终调优** — 已在 HUD 显示 FPS/实体数，真机后再压 LOD/DrawCall
 

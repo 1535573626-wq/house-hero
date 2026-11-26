@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.pico.spatial.ui.design.Button
 import com.pico.spatial.ui.design.PicoTheme
 import com.pico.spatial.ui.design.Text
@@ -33,6 +35,7 @@ fun WindowContainerScope.GameHUDWindow() {
     val gameState by GameStateManager.gameState.collectAsState()
     val fps by PerformanceManager.fps.collectAsState()
     val entityCount by PerformanceManager.entityCount.collectAsState()
+    val scope = rememberCoroutineScope()
 
     PicoTheme {
         Column(
@@ -50,9 +53,9 @@ fun WindowContainerScope.GameHUDWindow() {
             }
 
             when (gameState.mode) {
-                AppMode.Clean -> CleanHUD(gameState)
-                AppMode.Organize -> OrganizeHUD(gameState)
-                AppMode.Furniture -> FurnitureHUD(gameState)
+                AppMode.Clean -> CleanHUD(gameState, scope)
+                AppMode.Organize -> OrganizeHUD(gameState, scope)
+                AppMode.Furniture -> FurnitureHUD(gameState, scope)
             }
 
             HandGestureHint(gameState)
@@ -112,7 +115,10 @@ private fun ModeSelector(currentMode: AppMode) {
 }
 
 @Composable
-private fun CleanHUD(gameState: com.roomhero.app.viewmodel.GameState) {
+private fun CleanHUD(
+    gameState: com.roomhero.app.viewmodel.GameState,
+    scope: kotlinx.coroutines.CoroutineScope,
+) {
     when (gameState.phase) {
         GamePhase.Scanning -> {
             Text(text = "扫描地面中，请缓慢环顾四周…", fontSize = 28.sp)
@@ -134,7 +140,7 @@ private fun CleanHUD(gameState: com.roomhero.app.viewmodel.GameState) {
             Text(text = "时间到！", fontSize = 36.sp)
             Text(text = "最终得分: ${gameState.score}", fontSize = 32.sp)
             Text(text = "清洁率: ${gameState.progressPercent}%", fontSize = 28.sp)
-            Button(onClick = { RewardManager.spawnReward(gameState.score, gameState.progressPercent) }) {
+            Button(onClick = { scope.launch { RewardManager.spawnReward(gameState.score, gameState.progressPercent) } }) {
                 Text(text = "生成 3D 奖励", fontSize = 28.sp)
             }
             Button(onClick = { GameStateManager.reset() }) {
@@ -145,7 +151,10 @@ private fun CleanHUD(gameState: com.roomhero.app.viewmodel.GameState) {
 }
 
 @Composable
-private fun OrganizeHUD(gameState: com.roomhero.app.viewmodel.GameState) {
+private fun OrganizeHUD(
+    gameState: com.roomhero.app.viewmodel.GameState,
+    scope: kotlinx.coroutines.CoroutineScope,
+) {
     when (gameState.phase) {
         GamePhase.Scanning -> {
             Text(text = "扫描桌面中，请注视桌面…", fontSize = 28.sp)
@@ -168,7 +177,7 @@ private fun OrganizeHUD(gameState: com.roomhero.app.viewmodel.GameState) {
             Text(text = "时间到！", fontSize = 36.sp)
             Text(text = "最终得分: ${gameState.score}", fontSize = 32.sp)
             Text(text = "整理进度: ${gameState.progressPercent}%", fontSize = 28.sp)
-            Button(onClick = { RewardManager.spawnReward(gameState.score, gameState.progressPercent) }) {
+            Button(onClick = { scope.launch { RewardManager.spawnReward(gameState.score, gameState.progressPercent) } }) {
                 Text(text = "生成 3D 奖励", fontSize = 28.sp)
             }
             Button(onClick = { GameStateManager.reset() }) {
@@ -180,7 +189,10 @@ private fun OrganizeHUD(gameState: com.roomhero.app.viewmodel.GameState) {
 
 
 @Composable
-private fun FurnitureHUD(gameState: com.roomhero.app.viewmodel.GameState) {
+private fun FurnitureHUD(
+    gameState: com.roomhero.app.viewmodel.GameState,
+    scope: kotlinx.coroutines.CoroutineScope,
+) {
     when (gameState.phase) {
         GamePhase.Scanning -> {
             Text(text = "扫描地面中，准备物理世界…", fontSize = 28.sp)
@@ -205,7 +217,7 @@ private fun FurnitureHUD(gameState: com.roomhero.app.viewmodel.GameState) {
         GamePhase.Finished -> {
             Text(text = "时间到！", fontSize = 36.sp)
             Text(text = "最终得分: ${gameState.score}", fontSize = 32.sp)
-            Button(onClick = { RewardManager.spawnReward(gameState.score, gameState.progressPercent) }) {
+            Button(onClick = { scope.launch { RewardManager.spawnReward(gameState.score, gameState.progressPercent) } }) {
                 Text(text = "生成 3D 奖励", fontSize = 28.sp)
             }
             Button(onClick = { GameStateManager.reset() }) {

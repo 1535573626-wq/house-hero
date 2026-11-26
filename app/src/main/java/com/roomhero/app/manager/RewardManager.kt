@@ -10,6 +10,7 @@ import com.pico.spatial.core.math.EulerAngles
 import com.pico.spatial.core.math.Quat
 import com.pico.spatial.core.math.Vector3
 import com.roomhero.app.network.TripoClient
+import com.roomhero.app.network.TripoRank
 import kotlin.math.sin
 
 private const val REWARD_DISTANCE = 0.8f
@@ -59,12 +60,17 @@ object RewardManager {
      * @param score 最终得分，未传则使用 [prepare] 时记录的值
      * @param progress 完成百分比，未传则使用 [prepare] 时记录的值
      */
-    fun spawnReward(score: Int = lastScore, progress: Int = lastProgress) {
+    suspend fun spawnReward(score: Int = lastScore, progress: Int = lastProgress) {
         clear()
 
         val rank = rankFromProgress(progress)
         val count = rank.starCount
-        val mesh = TripoClient.generate("trophy ${rank.name}") ?: return
+        val tripoRank = when (rank) {
+            Rank.GOLD -> TripoRank.GOLD
+            Rank.SILVER -> TripoRank.SILVER
+            Rank.BRONZE -> TripoRank.BRONZE
+        }
+        val mesh = TripoClient.generate("trophy", tripoRank) ?: return
 
         val startX = -(count - 1) * REWARD_SPACING / 2f
         for (i in 0 until count) {

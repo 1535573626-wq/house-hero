@@ -20,7 +20,7 @@
 | **Spatial Audio** | 清洁成功、放置成功、游戏结束 3D 音效 | ✅ 已用 |
 | **Physics (RigidBody/Collision)** | 自由摆放家具模式：抓起、释放、重力碰撞 | ✅ 已用 |
 | **Spatial ML / Sense Mesh** | 整理模式：用 MeshTrackingManager 语义 TABLE 对齐真实桌面；家具模式：真实家具（CABINET/SOFA/BED/CHAIR/TABLE）包围盒碰撞警告 | 🟡 Mesh 语义已用；SecureMR 自定义模型待补 |
-| **Tripo 3D 生成** | 游戏结束后按分数生成 3D 奖杯/奖励模型 | 🟡 占位五角星已做，真实 API 待 token |
+| **Tripo 3D 生成** | 游戏结束后按分数生成 3D 奖杯/奖励模型 | 🟡 异步 HTTP 接口已写，无 token 时 fallback 五角星；拿到 token 后填 key 即生效 |
 | **Spatial Anchor / Persistence** | 保存房间布局、家具位置，下次进应用恢复 | ✅ 已用 |
 | **Spatial Video / Passthrough VFX** | 彩带飘落、清洁完成时的粒子/彩带雨、地面 shader 反馈 | 🟡 彩带雨粒子已做；地面 shader / 清洁轨迹待补 |
 | **Animation** | 奖励奖杯旋转浮动、成功反馈缩放动画 | 🟡 基础缩放+旋转浮动已做 |
@@ -37,7 +37,7 @@
 | 真实空间理解（mesh/平面/语义） | ✅ | 地面/桌面检测 |
 | 物理模拟与真实环境结合 | ✅ | Furniture 模式 |
 | AI/ML 能力（SpatialML + Tripo） | 🟡 | Sense Mesh 语义已用；SecureMR 自定义模型 + Tripo token 待补 |
-| 完整 UX 流程（开始→游戏→结束→奖励） | 🟡 | 流程通，但奖励是本地占位模型 |
+| 完整 UX 流程（开始→游戏→结束→奖励） | 🟡 | 流程通，奖励 Tripo 接口已接，等 token 验证真实模型 |
 | 性能优化 / 压榨硬件 | 🟡 | FPS/实体计数 HUD、彩带数量上限已做；真机 LOD 待测 |
 | 可扩展性 / 商业潜力 | 🟡 | 思路有，需包装 |
 
