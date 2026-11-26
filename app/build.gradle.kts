@@ -62,11 +62,4 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling.preview)
 }
 
-configurations.all {
-    resolutionStrategy {
-        exclude("androidx.compose.ui", "ui")
-        exclude("androidx.compose.ui", "ui-graphics")
-        exclude("androidx.compose.ui", "ui-text")
-        exclude("androidx.compose.foundation", "foundation")
-    }
-}
+

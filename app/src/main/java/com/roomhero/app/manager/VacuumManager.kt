@@ -1,13 +1,13 @@
 package com.roomhero.app.manager
 
 import com.pico.spatial.core.ecs.Entity
+import com.pico.spatial.core.ecs.ModelComponent
 import com.pico.spatial.core.ecs.TransformComponent
-import com.pico.spatial.core.math.Color
+import com.pico.spatial.core.ecs.resource.MeshResource
+import com.pico.spatial.core.ecs.resource.PhysicallyBasedMaterial
+import com.pico.spatial.core.math.Color4
 import com.pico.spatial.core.math.Vector3
-import com.pico.spatial.foundation.component.ModelComponent
-import com.pico.spatial.foundation.resource.MeshResource
-import com.pico.spatial.foundation.resource.PhysicallyBasedMaterial
-import com.pico.spatial.tracking.HMDTrackingProvider
+import com.pico.spatial.tracking.hmd.HMDTrackingProvider
 import com.pico.spatial.ui.foundation.content.SpatialContent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,19 +25,17 @@ private const val VACUUM_DISTANCE = 0.8f
  * 后续可扩展为手柄追踪或手势追踪。
  */
 object VacuumManager {
-    val root: Entity = Entity().apply {
-        components.set(TransformComponent())
-    }
+    val root: Entity = Entity()
 
     private var hmdProvider: HMDTrackingProvider? = null
     private var updateJob: Job? = null
 
-    var currentPosition: Vector3 = Vector3.ZERO
+    var currentPosition: Vector3 = Vector3(0f, 0f, 0f)
         private set
 
     private val vacuumMaterial by lazy {
         PhysicallyBasedMaterial.create().apply {
-            setBaseColor(Color(1.0f, 0.9f, 0.2f, 1.0f))
+            setBaseColor(Color4(1.0f, 0.9f, 0.2f, 1.0f))
             setOpacity(0.6f)
         }
     }
@@ -49,16 +47,15 @@ object VacuumManager {
         stop()
 
         val mesh = MeshResource.createSphere(0.08f)
-            ?: MeshResource.createBox(Vector3(0.15f, 0.15f, 0.15f))
+            ?: MeshResource.createBox(Vector3(0.15f, 0.15f, 0.15f), 0f)
             ?: return
 
         val visual = Entity().apply {
-            components.set(TransformComponent())
             components.set(ModelComponent(mesh, vacuumMaterial))
         }
         root.addChild(visual)
 
-        hmdProvider = HMDTrackingProvider.create(content).apply { start() }
+        hmdProvider = HMDTrackingProvider().apply { start() }
 
         updateJob = CoroutineScope(Dispatchers.Main).launch {
             while (isActive) {
@@ -77,12 +74,12 @@ object VacuumManager {
         hmdProvider?.stop()
         hmdProvider = null
 
-        root.children.forEach { it.destroy() }
+        root.getChildren().forEach { it.destroy() }
     }
 
     private fun updatePosition() {
         val provider = hmdProvider ?: return
-        val pose = provider.latestData?.hmdPose ?: return
+        val pose = provider.latestData.hmdPose
 
         val forward = pose.rotation.rotateVector(Vector3(0f, 0f, -1f))
         val position = pose.position + forward * VACUUM_DISTANCE

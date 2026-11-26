@@ -80,7 +80,7 @@ private fun MainStageContent(viewModel: GameViewModel) {
             content.addEntity(DirtManager.root)
             content.addEntity(VacuumManager.root)
 
-            DirtManager.spawnDirtGrid()
+            DirtManager.spawnDirtGrid(content)
             VacuumManager.start(content)
 
             coroutineScope {
