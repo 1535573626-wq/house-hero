@@ -14,6 +14,8 @@ enum class AppMode {
     Clean,
     /** 整理模式 */
     Organize,
+    /** 自由摆放家具模式 */
+    Furniture,
 }
 
 /**

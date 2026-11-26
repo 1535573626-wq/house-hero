@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.pico.spatial.ui.foundation.content.SpatialView
 import com.roomhero.app.manager.DirtManager
 import com.roomhero.app.manager.FeedbackManager
+import com.roomhero.app.manager.FurnitureManager
 import com.roomhero.app.manager.OrganizeManager
 import com.roomhero.app.manager.RoomSurfaceManager
 import com.roomhero.app.manager.VacuumManager
@@ -58,6 +59,7 @@ private fun MainStageContent() {
     when (mode) {
         AppMode.Clean -> CleanModeStage()
         AppMode.Organize -> OrganizeModeStage()
+        AppMode.Furniture -> FurnitureModeStage()
     }
 }
 
@@ -165,6 +167,58 @@ private fun OrganizeModeStage() {
             }
 
             OrganizeManager.reset()
+            VacuumManager.stop()
+            RoomSurfaceManager.stop()
+        }
+    )
+}
+
+
+@Composable
+private fun FurnitureModeStage() {
+    SpatialView(
+        update = { _, _ ->
+            FeedbackManager.updateAnimations(AnimationDt)
+        },
+        initial = { content, _ ->
+            content.addEntity(FurnitureManager.root)
+            content.addEntity(VacuumManager.root)
+
+            val surface = RoomSurfaceManager.awaitFloor(timeoutMillis = 5000L)
+            FurnitureManager.spawnFurniture(surface)
+            VacuumManager.start()
+            GameStateManager.setReady(0)
+
+            coroutineScope {
+                launch {
+                    while (isActive) {
+                        val state = GameStateManager.gameState.value
+                        if (state.isPlaying) {
+                            val cursorPos = VacuumManager.currentPosition
+                            FurnitureManager.checkDrag(cursorPos)
+                        }
+                        delay(50)
+                    }
+                }
+
+                launch {
+                    while (isActive) {
+                        val previous = GameStateManager.gameState.value
+                        if (previous.isPlaying && previous.timeRemaining > 0) {
+                            delay(1000)
+                            GameStateManager.tick()
+                            val current = GameStateManager.gameState.value
+                            if (!previous.isFinished && current.isFinished) {
+                                FeedbackManager.playFinish(VacuumManager.currentPosition)
+                            }
+                        } else {
+                            delay(100)
+                        }
+                    }
+                }
+            }
+
+            FurnitureManager.reset()
             VacuumManager.stop()
             RoomSurfaceManager.stop()
         }

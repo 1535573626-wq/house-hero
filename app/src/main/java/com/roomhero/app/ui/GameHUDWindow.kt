@@ -15,6 +15,7 @@ import com.pico.spatial.ui.design.Button
 import com.pico.spatial.ui.design.PicoTheme
 import com.pico.spatial.ui.design.Text
 import com.pico.spatial.ui.platform.containers.WindowContainerScope
+import com.roomhero.app.manager.FurnitureManager
 import com.roomhero.app.viewmodel.AppMode
 import com.roomhero.app.viewmodel.GamePhase
 import com.roomhero.app.viewmodel.GameStateManager
@@ -46,6 +47,7 @@ fun WindowContainerScope.GameHUDWindow() {
             when (gameState.mode) {
                 AppMode.Clean -> CleanHUD(gameState)
                 AppMode.Organize -> OrganizeHUD(gameState)
+                AppMode.Furniture -> FurnitureHUD(gameState)
             }
         }
     }
@@ -65,6 +67,12 @@ private fun ModeSelector(currentMode: AppMode) {
             enabled = currentMode != AppMode.Organize,
         ) {
             Text(text = "整理模式", fontSize = 24.sp)
+        }
+        Button(
+            onClick = { GameStateManager.switchMode(AppMode.Furniture) },
+            enabled = currentMode != AppMode.Furniture,
+        ) {
+            Text(text = "摆家具", fontSize = 24.sp)
         }
     }
 }
@@ -123,6 +131,40 @@ private fun OrganizeHUD(gameState: com.roomhero.app.viewmodel.GameState) {
             Text(text = "时间到！", fontSize = 36.sp)
             Text(text = "最终得分: ${gameState.score}", fontSize = 32.sp)
             Text(text = "整理进度: ${gameState.progressPercent}%", fontSize = 28.sp)
+            Button(onClick = { GameStateManager.reset() }) {
+                Text(text = "再玩一次", fontSize = 28.sp)
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun FurnitureHUD(gameState: com.roomhero.app.viewmodel.GameState) {
+    when (gameState.phase) {
+        GamePhase.Scanning -> {
+            Text(text = "扫描地面中，准备物理世界…", fontSize = 28.sp)
+        }
+        GamePhase.Ready -> {
+            Text(text = "物理世界已就绪", fontSize = 24.sp)
+            Text(text = "移动光标靠近家具即可抓起，点放下后家具会受重力落下", fontSize = 18.sp)
+            Button(onClick = { GameStateManager.startGame() }) {
+                Text(text = "开始摆放", fontSize = 28.sp)
+            }
+        }
+        GamePhase.Playing -> {
+            Text(text = "时间: ${gameState.timeRemaining}s", fontSize = 32.sp)
+            if (FurnitureManager.isGrabbing()) {
+                Button(onClick = { FurnitureManager.release() }) {
+                    Text(text = "放下家具", fontSize = 28.sp)
+                }
+            } else {
+                Text(text = "靠近家具并移动光标抓起", fontSize = 24.sp)
+            }
+        }
+        GamePhase.Finished -> {
+            Text(text = "时间到！", fontSize = 36.sp)
+            Text(text = "最终得分: ${gameState.score}", fontSize = 32.sp)
             Button(onClick = { GameStateManager.reset() }) {
                 Text(text = "再玩一次", fontSize = 28.sp)
             }
