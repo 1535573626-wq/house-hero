@@ -4,6 +4,7 @@ import com.pico.spatial.core.ecs.Entity
 import com.pico.spatial.core.ecs.ModelComponent
 import com.pico.spatial.core.ecs.TransformComponent
 import com.pico.spatial.core.ecs.resource.MeshResource
+import com.pico.spatial.core.ecs.resource.PhysicallyBasedMaterial
 import com.pico.spatial.core.ecs.resource.PolygonFillMode
 import com.pico.spatial.core.ecs.resource.UnlitMaterial
 import com.pico.spatial.core.math.Color4
@@ -14,6 +15,13 @@ import java.util.UUID
 
 private const val MAX_PLACEHOLDERS = 12
 private const val MIN_GRAB_RADIUS = 0.20f
+
+// 视觉反馈参数
+private const val GHOST_OPACITY = 0.12f
+private const val GHOST_SCALE = 0.96f
+private const val TAG_RADIUS = 0.035f
+private const val TAG_OFFSET_Y = 0.04f
+private const val GRAB_SCALE = 1.08f
 
 private val FURNITURE_TYPES = listOf(
     SemanticLabelType.SOFA,
@@ -46,9 +54,12 @@ private val SEMANTIC_COLORS = mapOf(
  *
  * @param anchorUUID 对应真实空间网格锚点的 UUID
  * @param label 语义标签
- * @param entity 占位模型实体
+ * @param entity 占位模型实体（线框外壳）
+ * @param fillEntity 内部半透明 ghost 填充
+ * @param tagEntity 顶部语义标记小球
  * @param size 包围盒尺寸
  * @param material 线框材质，碰撞警告时会变色
+ * @param fillMaterial ghost 填充材质，也会随碰撞变色
  * @param originalColor 原始颜色
  * @param isGrabbed 是否正被光标抓起
  */
@@ -56,8 +67,11 @@ data class FurnitureItem(
     val anchorUUID: UUID,
     val label: String,
     val entity: Entity,
+    val fillEntity: Entity,
+    val tagEntity: Entity,
     val size: Vector3,
     val material: UnlitMaterial,
+    val fillMaterial: PhysicallyBasedMaterial,
     val originalColor: Color4,
     var isGrabbed: Boolean = false,
 )
@@ -66,8 +80,8 @@ data class FurnitureItem(
  * 自由摆放家具管理器。
  *
  * - 不再使用程序生成的方块，而是读取 [RoomSurfaceManager] 扫描到的真实家具空间网格
- * - 为每件真实家具生成一个线框/半透明占位模型，覆盖在原家具上
- * - 用户可拖动占位模型试摆新布局；放下后保持位置，不触发物理坠落
+ * - 为每件真实家具生成一个线框外壳 + 半透明 ghost + 顶部语义标记
+ * - 用户可拖动占位模型试摆新布局；抓起时放大高亮，放下后保持位置，不触发物理坠落
  * - 布局通过 [FurnitureAnchorManager] 持久化，下次启动可恢复
  */
 object FurnitureManager {
@@ -112,15 +126,12 @@ object FurnitureManager {
 
             if (mesh == null) return@forEachIndexed
 
-            val material = UnlitMaterial.create().apply {
-                setBaseColor(color)
-                setPolygonFillMode(PolygonFillMode.LINE)
-                setOpacity(0.85f)
-            }
+            val (entity, material) = createWireframeShell(mesh, color)
+            val (fillEntity, fillMaterial) = createGhostFill(mesh, color)
+            val tagEntity = createTag(meshAnchor.boundingBoxSize, color)
 
-            val entity = Entity().apply {
-                components.set(ModelComponent(mesh, material))
-            }
+            entity.addChild(fillEntity)
+            entity.addChild(tagEntity)
 
             val saved = savedLayout?.find { it.anchorUUID == meshAnchor.anchorUUID }
             val startPosition = saved?.position ?: meshAnchor.transform.position
@@ -137,8 +148,11 @@ object FurnitureManager {
                     anchorUUID = meshAnchor.anchorUUID,
                     label = label,
                     entity = entity,
+                    fillEntity = fillEntity,
+                    tagEntity = tagEntity,
                     size = meshAnchor.boundingBoxSize,
                     material = material,
+                    fillMaterial = fillMaterial,
                     originalColor = color,
                 )
             )
@@ -161,13 +175,14 @@ object FurnitureManager {
     /**
      * 检查 [cursorPos] 是否抓起/拖动家具占位模型。
      *
-     * 拖动过程中会实时检测与真实家具 mesh 的包围盒相交，若重叠则把线框变红提示不可放置。
+     * 拖动过程中会实时检测与真实家具 mesh 的包围盒相交，若重叠则把线框与 ghost 变红提示不可放置。
      */
     fun checkDrag(cursorPos: Vector3): Boolean {
         val grabbed = items.find { it.isGrabbed }
         if (grabbed != null) {
             grabbed.entity.components[TransformComponent::class.java]?.apply {
                 position = Vector3(cursorPos.x, cursorPos.y, cursorPos.z)
+                scaleVector = Vector3(GRAB_SCALE)
             }
             updateCollisionWarning(grabbed)
             return false
@@ -199,6 +214,7 @@ object FurnitureManager {
     fun release() {
         items.find { it.isGrabbed }?.let { item ->
             item.isGrabbed = false
+            item.entity.components[TransformComponent::class.java]?.scaleVector = Vector3(1f)
             updateCollisionWarning(item)
         }
     }
@@ -213,7 +229,67 @@ object FurnitureManager {
     }
 
     /**
-     * 检测 [item] 是否与除自身外的真实家具 mesh 发生碰撞，并更新线框颜色。
+     * 创建线框外壳实体。
+     */
+    private fun createWireframeShell(mesh: MeshResource, color: Color4): Pair<Entity, UnlitMaterial> {
+        val material = UnlitMaterial.create().apply {
+            setBaseColor(color)
+            setPolygonFillMode(PolygonFillMode.LINE)
+            setOpacity(0.90f)
+        }
+        val entity = Entity().apply {
+            components.set(ModelComponent(mesh, material))
+        }
+        return entity to material
+    }
+
+    /**
+     * 创建内部半透明 ghost 填充实体。
+     */
+    private fun createGhostFill(mesh: MeshResource, color: Color4): Pair<Entity, PhysicallyBasedMaterial> {
+        val material = PhysicallyBasedMaterial.create().apply {
+            setBaseColor(Color4(color.red, color.green, color.blue, 1f))
+            setOpacity(GHOST_OPACITY)
+            setRoughness(0.85f)
+            setMetallic(0.0f)
+        }
+        val entity = Entity().apply {
+            components.set(ModelComponent(mesh, material))
+        }
+        entity.components[TransformComponent::class.java]?.scaleVector = Vector3(GHOST_SCALE)
+        return entity to material
+    }
+
+    /**
+     * 创建顶部语义标记小球。
+     */
+    private fun createTag(size: Vector3, color: Color4): Entity {
+        val sphere = try {
+            MeshResource.createSphere(TAG_RADIUS)
+        } catch (_: Exception) {
+            try {
+                MeshResource.createBox(Vector3(TAG_RADIUS), 0f)
+            } catch (_: Exception) {
+                null
+            }
+        }
+        val material = UnlitMaterial.create().apply {
+            setBaseColor(color)
+            setOpacity(0.95f)
+        }
+        val entity = Entity().apply {
+            if (sphere != null) components.set(ModelComponent(sphere, material))
+        }
+        entity.components[TransformComponent::class.java]?.position = Vector3(
+            0f,
+            size.y / 2f + TAG_RADIUS + TAG_OFFSET_Y,
+            0f,
+        )
+        return entity
+    }
+
+    /**
+     * 检测 [item] 是否与除自身外的真实家具 mesh 发生碰撞，并更新线框与 ghost 颜色。
      */
     private fun updateCollisionWarning(item: FurnitureItem) {
         val itemPos = item.entity.components[TransformComponent::class.java]?.position ?: return
@@ -233,6 +309,7 @@ object FurnitureManager {
 
         val targetColor = if (collides) Color4(1f, 0.2f, 0.2f, 0.90f) else item.originalColor
         item.material.setBaseColor(targetColor)
+        item.fillMaterial.setBaseColor(Color4(targetColor.red, targetColor.green, targetColor.blue, 1f))
     }
 
     private fun aabbIntersects(minA: Vector3, maxA: Vector3, minB: Vector3, maxB: Vector3): Boolean {
@@ -244,27 +321,32 @@ object FurnitureManager {
     private fun createFallbackPlaceholder(surface: FloorSurface) {
         val size = Vector3(0.40f, 0.45f, 0.40f)
         val mesh = MeshResource.createBox(size, 0.01f) ?: return
-        val material = UnlitMaterial.create().apply {
-            setBaseColor(Color4(0.80f, 0.80f, 0.80f, 0.85f))
-            setPolygonFillMode(PolygonFillMode.LINE)
-            setOpacity(0.85f)
-        }
-        val entity = Entity().apply {
-            components.set(ModelComponent(mesh, material))
-        }
+        val color = Color4(0.80f, 0.80f, 0.80f, 0.85f)
+
+        val (entity, material) = createWireframeShell(mesh, color)
+        val (fillEntity, fillMaterial) = createGhostFill(mesh, color)
+        val tagEntity = createTag(size, color)
+
+        entity.addChild(fillEntity)
+        entity.addChild(tagEntity)
+
         entity.components[TransformComponent::class.java]?.apply {
             position = surface.position + Vector3(0f, size.y / 2f, 0f)
             quaternion = Quat.identity()
         }
+
         root.addChild(entity)
         items.add(
             FurnitureItem(
                 anchorUUID = UUID(0L, 0L),
                 label = "FALLBACK",
                 entity = entity,
+                fillEntity = fillEntity,
+                tagEntity = tagEntity,
                 size = size,
                 material = material,
-                originalColor = Color4(0.80f, 0.80f, 0.80f, 0.85f),
+                fillMaterial = fillMaterial,
+                originalColor = color,
             )
         )
     }
