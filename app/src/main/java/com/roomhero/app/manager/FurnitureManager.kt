@@ -10,6 +10,7 @@ import com.pico.spatial.core.ecs.resource.MeshResource
 import com.pico.spatial.core.ecs.resource.PhysicallyBasedMaterial
 import com.pico.spatial.core.ecs.resource.PhysicsMaterialResource
 import com.pico.spatial.core.ecs.resource.ShapeResource
+import com.pico.spatial.sense.base.SemanticLabelType
 import com.pico.spatial.core.ecs.simulation.CollisionFilter
 import com.pico.spatial.core.ecs.simulation.CollisionInfoDetailLevel
 import com.pico.spatial.core.ecs.simulation.CollisionResponseMode
@@ -27,12 +28,16 @@ private const val GRAB_RADIUS = 0.25f
  * @param id 唯一编号
  * @param entity 家具实体
  * @param size 碰撞体尺寸
+ * @param material 材质引用，用于碰撞警告时变色
+ * @param originalColor 原始颜色
  * @param isGrabbed 是否正被光标抓起
  */
 data class FurnitureItem(
     val id: Int,
     val entity: Entity,
     val size: Vector3,
+    val material: PhysicallyBasedMaterial,
+    val originalColor: Color4,
     var isGrabbed: Boolean = false,
 )
 
@@ -122,13 +127,15 @@ object FurnitureManager {
             )
 
             root.addChild(entity)
-            items.add(FurnitureItem(index, entity, size))
+            items.add(FurnitureItem(index, entity, size, material, color))
         }
     }
 
     /**
-     * 检查 [cursorPos] 是否抓起家具。
-     * 返回是否发生了新的抓取。
+     * 检查 [cursorPos] 是否抓起家具，并在抓起时检测与真实家具 mesh 的碰撞。
+     *
+     * 若虚拟家具与扫描到的真实家具（桌子、柜子、沙发等）发生包围盒相交，
+     * 家具会高亮为红色，提示用户此处不可放置。
      */
     fun checkDrag(cursorPos: Vector3): Boolean {
         val grabbed = items.find { it.isGrabbed }
@@ -137,6 +144,7 @@ object FurnitureManager {
             grabbed.entity.components[TransformComponent::class.java]?.apply {
                 position = Vector3(cursorPos.x, cursorPos.y, cursorPos.z)
             }
+            updateCollisionWarning(grabbed)
             return false
         }
 
@@ -159,6 +167,38 @@ object FurnitureManager {
         }
 
         return false
+    }
+
+    /**
+     * 检测 [item] 是否与真实家具 mesh 发生碰撞，并更新材质颜色。
+     */
+    private fun updateCollisionWarning(item: FurnitureItem) {
+        val itemPos = item.entity.components[TransformComponent::class.java]?.position ?: return
+        val itemMin = itemPos - item.size * 0.5f
+        val itemMax = itemPos + item.size * 0.5f
+
+        val collides = RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.TABLE)
+            .asSequence()
+            .plus(RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.CABINET))
+            .plus(RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.SOFA))
+            .plus(RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.BED))
+            .plus(RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.CHAIR))
+            .any { mesh ->
+                val meshPos = mesh.transform.position
+                val meshSize = mesh.boundingBoxSize
+                val meshMin = meshPos - meshSize * 0.5f
+                val meshMax = meshPos + meshSize * 0.5f
+                aabbIntersects(itemMin, itemMax, meshMin, meshMax)
+            }
+
+        val targetColor = if (collides) Color4(1f, 0.2f, 0.2f, 1f) else item.originalColor
+        item.material.setBaseColor(targetColor)
+    }
+
+    private fun aabbIntersects(minA: Vector3, maxA: Vector3, minB: Vector3, maxB: Vector3): Boolean {
+        return minA.x <= maxB.x && maxA.x >= minB.x &&
+            minA.y <= maxB.y && maxA.y >= minB.y &&
+            minA.z <= maxB.z && maxA.z >= minB.z
     }
 
     /**

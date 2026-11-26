@@ -8,7 +8,9 @@ import com.pico.spatial.core.ecs.resource.PolygonFillMode
 import com.pico.spatial.core.ecs.resource.UnlitMaterial
 import com.pico.spatial.core.math.Color4
 import com.pico.spatial.core.math.Quat
+import com.pico.spatial.core.math.Vector2
 import com.pico.spatial.core.math.Vector3
+import com.pico.spatial.sense.base.SemanticLabelType
 import kotlin.random.Random
 
 private const val ITEM_SIZE = 0.12f
@@ -17,16 +19,21 @@ private const val GRAB_RADIUS = 0.15f
 private const val PLACE_RADIUS = 0.12f
 private const val ITEM_HEIGHT_OFFSET = 0.01f
 
+/** 模拟 SpatialML 识别出的物品类别。真机可替换为 SecureMR 模型输出。 */
+private val ITEM_LABELS = listOf("Book", "Cup", "Charger", "Toy")
+
 /**
  * 单个待整理物品。
  *
  * @param id 唯一编号
+ * @param label AI 识别出的物品类别标签（如 Book、Cup）
  * @param color 物品颜色
  * @param currentEntity 当前位置实体（用户需要移动它）
  * @param targetEntity 目标位置虚线框实体
  */
 data class OrganizeItem(
     val id: Int,
+    val label: String,
     val color: Color4,
     val currentEntity: Entity,
     val targetEntity: Entity,
@@ -62,6 +69,9 @@ object OrganizeManager {
 
     /**
      * 在 [surface] 上生成物品与目标框。
+     *
+     * 若 RoomSurfaceManager 已扫描到真实 TABLE mesh，会自动对齐到真实桌面的
+     * 中心位置与包围盒，让整理游戏发生在真实家具上。
      */
     fun spawnItems(surface: FloorSurface) {
         reset()
@@ -69,21 +79,37 @@ object OrganizeManager {
         val mesh = itemMesh ?: return
         val targetMesh = targetMesh ?: return
 
+        // 优先使用真实 TABLE mesh 的包围盒，否则回退平面检测尺寸
+        val tableMesh = RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.TABLE)
+            .maxByOrNull { it.boundingBoxSize.x * it.boundingBoxSize.y * it.boundingBoxSize.z }
+        val effectiveSurface = if (tableMesh != null) {
+            surface.copy(
+                position = tableMesh.transform.position,
+                rotation = tableMesh.transform.rotation.toQuat(),
+                bounds = Vector2(tableMesh.boundingBoxSize.x, tableMesh.boundingBoxSize.z),
+                anchorUUID = tableMesh.anchorUUID,
+                isFallback = false,
+            )
+        } else {
+            surface
+        }
+
         val parent = Entity().apply {
             components[TransformComponent::class.java]?.apply {
-                position = surface.position
-                quaternion = surface.rotation
+                position = effectiveSurface.position
+                quaternion = effectiveSurface.rotation
             }
         }
         tableParent = parent
         root.addChild(parent)
 
         val random = Random.Default
-        val halfW = (surface.bounds.x / 2f) - TARGET_SIZE
-        val halfD = (surface.bounds.y / 2f) - TARGET_SIZE
+        val halfW = (effectiveSurface.bounds.x / 2f) - TARGET_SIZE
+        val halfD = (effectiveSurface.bounds.y / 2f) - TARGET_SIZE
 
         for (i in itemColors.indices) {
             val color = itemColors[i]
+            val label = ITEM_LABELS[i % ITEM_LABELS.size]
             val startX = -halfW * 0.6f
             val startZ = (i - 1) * (TARGET_SIZE + 0.05f)
             val targetX = halfW * 0.6f
@@ -110,6 +136,7 @@ object OrganizeManager {
             items.add(
                 OrganizeItem(
                     id = i,
+                    label = label,
                     color = color,
                     currentEntity = itemEntity,
                     targetEntity = targetEntity,

@@ -7,6 +7,8 @@ import com.pico.spatial.core.math.Vector3
 import com.pico.spatial.sense.base.AnchorUpdate
 import com.pico.spatial.sense.base.SemanticLabelType
 import com.pico.spatial.sense.base.TrackingState
+import com.pico.spatial.sense.mesh.MeshAnchor
+import com.pico.spatial.sense.mesh.MeshTrackingManager
 import com.pico.spatial.sense.plane.PlaneAnchor
 import com.pico.spatial.sense.plane.PlaneTrackingManager
 import java.util.UUID
@@ -36,22 +38,32 @@ data class FloorSurface(
 /**
  * 房间表面管理器。
  *
- * 负责启动 [PlaneTrackingManager] 并收集地面（FLOOR）/桌面（TABLE）平面。
+ * 负责启动 [PlaneTrackingManager] / [MeshTrackingManager] 并收集：
+ * - 地面（FLOOR）/桌面（TABLE）平面
+ * - 真实家具/物体的空间网格（SOFA、CHAIR、CABINET、BED 等语义）
+ *
  * 提供 [awaitFloor] / [awaitTable] 在超时后返回 fallback 表面，保证无真机/Emulator 也能跑。
  */
 object RoomSurfaceManager {
 
     private val floorAnchors = mutableMapOf<UUID, PlaneAnchor>()
     private val tableAnchors = mutableMapOf<UUID, PlaneAnchor>()
-    private var subscription: Cancellable? = null
+    private val furnitureMeshes = mutableMapOf<UUID, MeshAnchor>()
+    private var planeSubscription: Cancellable? = null
+    private var meshSubscription: Cancellable? = null
 
     /**
-     * 启动平面追踪并开始订阅锚点更新。
+     * 启动平面追踪与空间网格追踪，并订阅锚点更新。
      */
     fun start() {
-        if (subscription != null) return
+        startPlaneTracking()
+        startMeshTracking()
+    }
 
-        subscription = PlaneTrackingManager.subscribeAnchorUpdate { event ->
+    private fun startPlaneTracking() {
+        if (planeSubscription != null) return
+
+        planeSubscription = PlaneTrackingManager.subscribeAnchorUpdate { event ->
             if (PlaneTrackingManager.state != TrackingState.RUNNING) return@subscribeAnchorUpdate
             val anchor = event.anchor
             when (event.event) {
@@ -73,15 +85,72 @@ object RoomSurfaceManager {
         PlaneTrackingManager.start()
     }
 
+    private fun startMeshTracking() {
+        if (meshSubscription != null) return
+
+        meshSubscription = MeshTrackingManager.subscribeAnchorUpdate { event ->
+            if (MeshTrackingManager.state != TrackingState.RUNNING) return@subscribeAnchorUpdate
+            val anchor = event.anchor
+            when (event.event) {
+                AnchorUpdate.Event.ADDED,
+                AnchorUpdate.Event.UPDATED -> {
+                    furnitureMeshes[anchor.anchorUUID] = anchor
+                }
+                AnchorUpdate.Event.REMOVED -> {
+                    furnitureMeshes.remove(anchor.anchorUUID)
+                }
+                else -> {}
+            }
+        }
+        MeshTrackingManager.start()
+    }
+
     /**
-     * 停止平面追踪并清空缓存。
+     * 停止追踪并清空缓存。
      */
     fun stop() {
-        subscription?.cancel()
-        subscription = null
+        planeSubscription?.cancel()
+        planeSubscription = null
+        meshSubscription?.cancel()
+        meshSubscription = null
         floorAnchors.clear()
         tableAnchors.clear()
+        furnitureMeshes.clear()
         PlaneTrackingManager.stop()
+        MeshTrackingManager.stop()
+    }
+
+    /**
+     * 当前已缓存的真实家具网格数量（按语义过滤）。
+     */
+    fun furnitureMeshCount(type: SemanticLabelType): Int =
+        furnitureMeshes.values.count { type in it.semantics }
+
+    /**
+     * 获取指定语义类型的所有家具网格。
+     */
+    fun getFurnitureMeshes(type: SemanticLabelType): List<MeshAnchor> =
+        furnitureMeshes.values.filter { type in it.semantics }
+
+    /**
+     * 等待检测到指定语义的真实家具网格，[timeoutMillis] 内未检测到则返回 null。
+     */
+    suspend fun awaitFurnitureMesh(
+        type: SemanticLabelType,
+        timeoutMillis: Long = 5000L,
+    ): MeshAnchor? {
+        start()
+
+        return withTimeoutOrNull(timeoutMillis) {
+            var mesh: MeshAnchor? = null
+            while (mesh == null) {
+                mesh = getFurnitureMeshes(type).maxByOrNull {
+                    it.boundingBoxSize.x * it.boundingBoxSize.y * it.boundingBoxSize.z
+                }
+                if (mesh == null) delay(200L)
+            }
+            mesh
+        }
     }
 
     /**

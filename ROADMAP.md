@@ -15,11 +15,11 @@
 |---|---|---|
 | **Spatial Mesh / Plane Tracking** | 扫描真实地面、桌面，锚定彩带/物品/家具 | ✅ 已用 |
 | **HMD Tracking** | 头部前方固定光标（吸尘器/抓取点） | ✅ 已用 |
-| **Hand Tracking / Gesture** | 手势点击 SpatialUI 面板（开始游戏、切换模式），做家务时不用握手柄 | ⬜ 未做 |
+| **Hand Tracking / Gesture** | 手势数据驱动吸尘器光标；SpatialUI 面板仍可用鼠标/手柄点击，后续补纯手势点击 | 🟡 数据层已做，UI 点击待补 |
 | **Spatial UI (WindowContainer / PicoTheme)** | 悬浮 HUD、模式选择、计时、分数、结束按钮 | ✅ 已用 |
 | **Spatial Audio** | 清洁成功、放置成功、游戏结束 3D 音效 | ✅ 已用 |
 | **Physics (RigidBody/Collision)** | 自由摆放家具模式：抓起、释放、重力碰撞 | ✅ 已用 |
-| **Spatial ML (SecureMR)** | 整理模式：识别物品类别并推荐收纳位置；家具模式：识别真实家具轮廓辅助摆放 | ⬜ 接入依赖，未写业务 |
+| **Spatial ML / Sense Mesh** | 整理模式：用 MeshTrackingManager 语义 TABLE 对齐真实桌面；家具模式：真实家具（CABINET/SOFA/BED/CHAIR/TABLE）包围盒碰撞警告 | 🟡 Mesh 语义已用；SecureMR 自定义模型待补 |
 | **Tripo 3D 生成** | 游戏结束后按分数生成 3D 奖杯/奖励模型 | 🟡 占位五角星已做，真实 API 待 token |
 | **Spatial Anchor / Persistence** | 保存房间布局、家具位置，下次进应用恢复 | ⬜ 未做 |
 | **Spatial Video / Passthrough VFX** | 彩带飘落、清洁完成时的粒子/彩带雨、地面 shader 反馈 | ⬜ 未做 |
@@ -33,10 +33,10 @@
 |---|---|---|
 | 创新性：把无聊家务游戏化 | ✅ | 清洁+整理+摆家具三合一 |
 | 深度使用 Spatial SDK | 🟡 | 已用核心能力，ML/Anchor/Video 还没 |
-| 手势追踪交互 | ⬜ | 计划但尚未实现 |
+| 手势追踪交互 | 🟡 | 手部位置已驱动光标，面板纯手势点击尚未实现 |
 | 真实空间理解（mesh/平面/语义） | ✅ | 地面/桌面检测 |
 | 物理模拟与真实环境结合 | ✅ | Furniture 模式 |
-| AI/ML 能力（SpatialML + Tripo） | 🟡 | 依赖已加，业务待补 |
+| AI/ML 能力（SpatialML + Tripo） | 🟡 | Sense Mesh 语义已用；SecureMR 自定义模型 + Tripo token 待补 |
 | 完整 UX 流程（开始→游戏→结束→奖励） | 🟡 | 流程通，但奖励是本地占位模型 |
 | 性能优化 / 压榨硬件 | ⬜ | 尚未专门做 |
 | 可扩展性 / 商业潜力 | 🟡 | 思路有，需包装 |
@@ -45,10 +45,10 @@
 
 - [x] 项目骨架：Kotlin + Compose + Spatial SDK 6.2.8
 - [x] 三种游戏模式切换：清洁 / 整理 / 摆家具
-- [x] RoomSurfaceManager：启动 PlaneTracking，等待地面/桌面，fallback 虚拟表面
+- [x] RoomSurfaceManager：启动 PlaneTracking + MeshTracking，等待地面/桌面/真实家具 mesh，fallback 虚拟表面
 - [x] DirtManager：在地面上生成彩色派对彩带，HMD 光标靠近清除
-- [x] OrganizeManager：桌面生成物品+虚线目标框，光标拖入完成整理
-- [x] FurnitureManager：物理世界 + 可抓取家具 + 重力释放碰撞
+- [x] OrganizeManager：桌面生成物品+虚线目标框，优先对齐真实 TABLE mesh，模拟 SpatialML 物品标签
+- [x] FurnitureManager：物理世界 + 可抓取家具 + 重力释放碰撞 + 真实家具 mesh 碰撞警告
 - [x] VacuumManager：HMD 前方光标，跟随头部移动
 - [x] FeedbackManager：空间音效 + 缩放消失动画
 - [x] GameStateManager：阶段机（Scanning / Ready / Playing / Finished）+ 计分/倒计时
@@ -62,7 +62,7 @@
    - 用 pinch/air-tap 替代按钮点击，做家务时手空不出来握手柄
    - 面板按钮支持手势 hover + 捏合确认
 
-2. **SpatialML 真正落地**
+2. **SpatialML / Sense Mesh 真正落地** ✅ 基础版已完成
    - 整理模式：识别桌上物品（书、充电器、杯子等），自动推荐归类区域
    - 家具模式：识别真实家具轮廓，给出“能否放这里”的碰撞/空间建议
    - 可选：用 SecureMR 做实时物体检测或平面分割
