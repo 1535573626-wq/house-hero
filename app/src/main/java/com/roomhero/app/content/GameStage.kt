@@ -19,6 +19,7 @@ import com.pico.spatial.ui.platform.containers.openWindowContainer
 import com.roomhero.app.manager.DirtManager
 import com.roomhero.app.manager.FeedbackManager
 import com.roomhero.app.manager.FurnitureManager
+import com.roomhero.app.manager.HandTrackingManager
 import com.roomhero.app.manager.OrganizeManager
 import com.roomhero.app.manager.RewardManager
 import com.roomhero.app.manager.RoomSurfaceManager
@@ -90,6 +91,7 @@ private fun CleanModeStage() {
 
             val surface = RoomSurfaceManager.awaitFloor(timeoutMillis = 5000L)
             DirtManager.spawnDirtGrid(surface)
+            HandTrackingManager.start()
             VacuumManager.start()
             GameStateManager.setReady(DirtManager.totalCount())
 
@@ -133,6 +135,7 @@ private fun CleanModeStage() {
 
             DirtManager.reset()
             VacuumManager.stop()
+            HandTrackingManager.stop()
             RewardManager.reset()
             RoomSurfaceManager.stop()
         }
@@ -153,6 +156,7 @@ private fun OrganizeModeStage() {
 
             val surface = RoomSurfaceManager.awaitTable(timeoutMillis = 5000L)
             OrganizeManager.spawnItems(surface)
+            HandTrackingManager.start()
             VacuumManager.start()
             GameStateManager.setReady(OrganizeManager.totalCount())
 
@@ -196,6 +200,7 @@ private fun OrganizeModeStage() {
 
             OrganizeManager.reset()
             VacuumManager.stop()
+            HandTrackingManager.stop()
             RewardManager.reset()
             RoomSurfaceManager.stop()
         }
@@ -217,6 +222,7 @@ private fun FurnitureModeStage() {
 
             val surface = RoomSurfaceManager.awaitFloor(timeoutMillis = 5000L)
             FurnitureManager.spawnFurniture(surface)
+            HandTrackingManager.start()
             VacuumManager.start()
             GameStateManager.setReady(0)
 
@@ -257,6 +263,7 @@ private fun FurnitureModeStage() {
 
             FurnitureManager.reset()
             VacuumManager.stop()
+            HandTrackingManager.stop()
             RewardManager.reset()
             RoomSurfaceManager.stop()
         }

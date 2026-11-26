@@ -77,6 +77,14 @@ object VacuumManager {
     }
 
     private fun updatePosition() {
+        // 优先使用手部追踪位置；未检测到手时回退到 HMD 前方固定点
+        if (HandTrackingManager.isTracking) {
+            val handPos = HandTrackingManager.currentHandPosition
+            root.components[TransformComponent::class.java]?.position = handPos
+            currentPosition = handPos
+            return
+        }
+
         val provider = hmdProvider ?: return
         val pose = provider.latestData.hmdPose
 

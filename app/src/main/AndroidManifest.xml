@@ -4,6 +4,8 @@
 
     <!-- 空间感知：平面检测、空间网格、场景理解 -->
     <uses-permission android:name="com.picovr.permission.SPATIAL_DATA" />
+    <!-- 手部追踪：手势捏合交互 -->
+    <uses-permission android:name="com.picovr.permission.HAND_TRACKING" />
 
     <application
         android:name=".platform.SpatialApplication"
