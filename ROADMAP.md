@@ -21,7 +21,7 @@
 | **Physics (RigidBody/Collision)** | 自由摆放家具模式：抓起、释放、重力碰撞 | ✅ 已用 |
 | **Spatial ML / Sense Mesh** | 整理模式：用 MeshTrackingManager 语义 TABLE 对齐真实桌面；家具模式：真实家具（CABINET/SOFA/BED/CHAIR/TABLE）包围盒碰撞警告 | 🟡 Mesh 语义已用；SecureMR 自定义模型待补 |
 | **Tripo 3D 生成** | 游戏结束后按分数生成 3D 奖杯/奖励模型 | 🟡 占位五角星已做，真实 API 待 token |
-| **Spatial Anchor / Persistence** | 保存房间布局、家具位置，下次进应用恢复 | ⬜ 未做 |
+| **Spatial Anchor / Persistence** | 保存房间布局、家具位置，下次进应用恢复 | ✅ 已用 |
 | **Spatial Video / Passthrough VFX** | 彩带飘落、清洁完成时的粒子/彩带雨、地面 shader 反馈 | 🟡 彩带雨粒子已做；地面 shader / 清洁轨迹待补 |
 | **Animation** | 奖励奖杯旋转浮动、成功反馈缩放动画 | 🟡 基础缩放+旋转浮动已做 |
 
@@ -48,7 +48,8 @@
 - [x] RoomSurfaceManager：启动 PlaneTracking + MeshTracking，等待地面/桌面/真实家具 mesh，fallback 虚拟表面
 - [x] DirtManager：在地面上生成彩色派对彩带，HMD 光标靠近清除
 - [x] OrganizeManager：桌面生成物品+虚线目标框，优先对齐真实 TABLE mesh，模拟 SpatialML 物品标签
-- [x] FurnitureManager：物理世界 + 可抓取家具 + 重力释放碰撞 + 真实家具 mesh 碰撞警告
+- [x] FurnitureManager：物理世界 + 可抓取家具 + 重力释放碰撞 + 真实家具 mesh 碰撞警告 + 布局持久化
+- [x] FurnitureAnchorManager：SharedPreferences + WorldTrackingManager 空间锚点保存/恢复家具布局
 - [x] VacuumManager：HMD 前方光标，跟随头部移动
 - [x] FeedbackManager：空间音效 + 缩放消失动画 + 游戏结束彩带雨粒子
 - [x] GameStateManager：阶段机（Scanning / Ready / Playing / Finished）+ 计分/倒计时

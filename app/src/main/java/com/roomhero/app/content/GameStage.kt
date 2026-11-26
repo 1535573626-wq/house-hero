@@ -18,6 +18,7 @@ import com.pico.spatial.ui.foundation.content.SpatialView
 import com.pico.spatial.ui.platform.containers.openWindowContainer
 import com.roomhero.app.manager.DirtManager
 import com.roomhero.app.manager.FeedbackManager
+import com.roomhero.app.manager.FurnitureAnchorManager
 import com.roomhero.app.manager.FurnitureManager
 import com.roomhero.app.manager.HandTrackingManager
 import com.roomhero.app.manager.OrganizeManager
@@ -248,7 +249,8 @@ private fun FurnitureModeStage() {
             content.addEntity(RewardManager.root)
 
             val surface = RoomSurfaceManager.awaitFloor(timeoutMillis = 5000L)
-            FurnitureManager.spawnFurniture(surface)
+            val savedLayout = FurnitureAnchorManager.loadLayout()
+            FurnitureManager.spawnFurniture(surface, savedLayout)
             HandTrackingManager.start()
             VacuumManager.start()
             GameStateManager.setReady(0)
@@ -274,6 +276,7 @@ private fun FurnitureModeStage() {
                             val current = GameStateManager.gameState.value
                             if (!previous.isFinished && current.isFinished) {
                                 FeedbackManager.playFinish(VacuumManager.currentPosition)
+                                FurnitureAnchorManager.saveLayout(FurnitureManager.snapshot())
                                 RewardManager.prepare(
                                     score = current.score,
                                     progress = current.progressPercent,

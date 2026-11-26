@@ -63,8 +63,10 @@ object FurnitureManager {
 
     /**
      * 在 [surface] 上生成物理世界与家具。
+     *
+     * 若 [savedLayout] 不为空，会按保存的位置/旋转恢复家具，实现持久化布局。
      */
-    fun spawnFurniture(surface: FloorSurface) {
+    fun spawnFurniture(surface: FloorSurface, savedLayout: List<FurnitureSnapshot>? = null) {
         reset()
 
         // 物理世界
@@ -103,10 +105,16 @@ object FurnitureManager {
                 components.set(ModelComponent(mesh, material))
             }
 
-            val startY = size.y / 2f + 0.1f * (index + 1)
+            val saved = savedLayout?.getOrNull(index)
+            val startPosition = saved?.position ?: run {
+                val startY = size.y / 2f + 0.1f * (index + 1)
+                surface.position + Vector3(localPos.x, startY, localPos.z)
+            }
+            val startRotation = saved?.rotation ?: Quat()
+
             entity.components[TransformComponent::class.java]?.apply {
-                position = surface.position + Vector3(localPos.x, startY, localPos.z)
-                quaternion = Quat()
+                position = startPosition
+                quaternion = startRotation
             }
 
             entity.components.set(
@@ -129,6 +137,17 @@ object FurnitureManager {
             root.addChild(entity)
             items.add(FurnitureItem(index, entity, size, material, color))
         }
+    }
+
+    /**
+     * 获取当前所有家具的持久化快照。
+     */
+    fun snapshot(): List<FurnitureSnapshot> = items.map { item ->
+        val transform = item.entity.components[TransformComponent::class.java]
+        FurnitureSnapshot(
+            position = transform?.position ?: Vector3.ZERO,
+            rotation = transform?.quaternion ?: Quat.identity(),
+        )
     }
 
     /**
