@@ -37,6 +37,7 @@ object FeedbackManager {
     private var successAudio: AudioResource? = null
     private var placeAudio: AudioResource? = null
     private var finishAudio: AudioResource? = null
+    private var warningAudio: AudioResource? = null
 
     private val animatingEntities = mutableListOf<AnimatingEntity>()
     private val activeParticles = mutableListOf<Entity>()
@@ -67,6 +68,7 @@ object FeedbackManager {
             successAudio = AudioResource.load("success", "success.wav", LoadType.FROM_ASSETS)
             placeAudio = AudioResource.load("place", "place.wav", LoadType.FROM_ASSETS)
             finishAudio = AudioResource.load("finish", "finish.wav", LoadType.FROM_ASSETS)
+            warningAudio = AudioResource.load("warning", "warning.wav", LoadType.FROM_ASSETS)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -84,6 +86,14 @@ object FeedbackManager {
      */
     fun playPlaceSuccess(position: Vector3) {
         playSpatial(placeAudio, position)
+    }
+
+    /**
+     * 播放家具碰撞警告音效（在 [position] 处）。
+     * 如果缺少 warning.wav，会回退到 placeAudio。
+     */
+    fun playCollisionWarning(position: Vector3) {
+        playSpatial(warningAudio ?: placeAudio, position)
     }
 
     /**
@@ -238,8 +248,10 @@ object FeedbackManager {
         successAudio?.close()
         placeAudio?.close()
         finishAudio?.close()
+        warningAudio?.close()
         successAudio = null
         placeAudio = null
         finishAudio = null
+        warningAudio = null
     }
 }

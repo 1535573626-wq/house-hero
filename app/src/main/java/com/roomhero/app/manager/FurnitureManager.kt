@@ -74,6 +74,7 @@ data class FurnitureItem(
     val fillMaterial: PhysicallyBasedMaterial,
     val originalColor: Color4,
     var isGrabbed: Boolean = false,
+    var wasColliding: Boolean = false,
 )
 
 /**
@@ -310,6 +311,12 @@ object FurnitureManager {
         val targetColor = if (collides) Color4(1f, 0.2f, 0.2f, 0.90f) else item.originalColor
         item.material.setBaseColor(targetColor)
         item.fillMaterial.setBaseColor(Color4(targetColor.red, targetColor.green, targetColor.blue, 1f))
+
+        // 碰撞状态由“无”变“有”时播放一次空间警告音效，避免连续鬼畜
+        if (collides && !item.wasColliding) {
+            FeedbackManager.playCollisionWarning(itemPos)
+        }
+        item.wasColliding = collides
     }
 
     private fun aabbIntersects(minA: Vector3, maxA: Vector3, minB: Vector3, maxB: Vector3): Boolean {
