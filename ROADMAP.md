@@ -1,7 +1,7 @@
 # House Hero — 项目全景与进度
 
 > 交互备忘：切换对话后快速恢复上下文用。目标、已做、未做、下一步都在这里。  
-> 更新时间：2026-11-28（成就系统 + 性能优化 + 整理真实物体 mesh 已上线）
+> 更新时间：2026-11-28（成就系统 + 性能压榨 + 整理真实物体 mesh 已上线）
 
 ## 1. 一句话创意
 
@@ -57,7 +57,7 @@
 - [x] DirtManager：派对彩带 + 超大房间自动限制数量（MAX 200）+ 按颜色共享材质 + 二维网格空间分区清洁检测
 - [x] GameStateManager：阶段机（Scanning / Ready / Playing / Finished）+ 计分/倒计时
 - [x] GameHUDWindow：SpatialUI 悬浮面板，显示模式选择、计时、分数、进度
-- [x] RewardManager：游戏结束后按分数生成 1~3 个旋转浮动的 3D 奖杯（本地五角星占位）
+- [x] RewardManager：对象池复用奖励 Entity/Material；Tripo 奖杯并发生成；生成中显示旋转 loading 占位
 - [x] TripoClient 占位：无 token 时返回程序化五角星 mesh；token 已注入 `BuildConfig`
 - [x] AchievementManager：本地成就与统计系统，11 个成就（清洁/整理/速度/完美/高分/连续/家具规划等），SharedPreferences 持久化
 - [x] GameHUDWindow 成就解锁提示：游戏结束阶段显示新解锁成就列表，5 秒后自动消失
@@ -104,8 +104,11 @@
 7. **性能压榨** 🟡 部分完成
    - ✅ 帧率/帧时间/DrawCall/三角面实时监控
    - ✅ DirtManager 材质共享 + 空间分区，降低清洁检测复杂度
+   - ✅ DirtManager 距离 LOD：近距离 plane（2 tri），远距离 box（12 tri）
+   - ✅ DirtManager 分帧生成彩带，每 20 片 yield 一帧，避免启动跳帧
+   - ✅ RewardManager 对象池复用 Entity/Material
+   - ✅ Tripo 模型并发生成 + 生成中旋转 loading 占位，不阻塞 HUD
    - 🟡 大房间下的 mesh LOD / 平面管理待补
-   - 🟡 多线程加载 Tripo 模型不卡主线程待补
 
 8. **打包与提交**
    - 生成 release APK

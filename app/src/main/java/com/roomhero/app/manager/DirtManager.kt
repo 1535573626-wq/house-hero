@@ -10,6 +10,7 @@ import com.pico.spatial.core.math.EulerAngles
 import com.pico.spatial.core.math.Quat
 import com.pico.spatial.core.math.Vector3
 import kotlin.random.Random
+import kotlinx.coroutines.yield
 
 private const val CONFETTI_WIDTH = 0.26f
 private const val CONFETTI_DEPTH = 0.08f
@@ -20,6 +21,9 @@ private const val MAX_DIRT_PIECES = 200
 // 空间分区单元大小：约 2 倍清洁半径，保证相邻网格覆盖全部可能命中范围
 private const val GRID_CELL_SIZE = 0.35f
 private const val CLEAN_RADIUS = 0.18f
+
+// LOD：距离 HMD 超过此值的彩带用低模 box，减少远距离三角面
+private const val LOD_DISTANCE = 1.5f
 
 /**
  * 单张彩带记录。
@@ -63,9 +67,16 @@ object DirtManager {
         Color4(0.10f, 0.90f, 1.00f, 0.90f), // 青
     )
 
-    private val confettiMesh by lazy {
+    /** 近景高质量彩带 mesh：plane，仅 2 个三角形。 */
+    private val planeMesh by lazy {
         MeshResource.createPlane(CONFETTI_WIDTH, CONFETTI_DEPTH, 0f)
             ?: MeshResource.createBox(Vector3(CONFETTI_WIDTH, 0.004f, CONFETTI_DEPTH), 0f)
+    }
+
+    /** 远景低模彩带 mesh：box，12 个三角形，距离远时看不出细节差异。 */
+    private val boxMesh by lazy {
+        MeshResource.createBox(Vector3(CONFETTI_WIDTH, 0.004f, CONFETTI_DEPTH), 0f)
+            ?: MeshResource.createPlane(CONFETTI_WIDTH, CONFETTI_DEPTH, 0f)
     }
 
     /** 按颜色缓存材质，避免每张彩带都新建材质对象。 */
@@ -80,11 +91,14 @@ object DirtManager {
 
     /**
      * 在 [surface] 上生成派对彩带。
+     *
+     * @param hmdPosition HMD/吸尘器当前世界坐标，用于生成时决定每片彩带的 LOD mesh
      */
-    fun spawnDirtGrid(surface: FloorSurface) {
+    suspend fun spawnDirtGrid(surface: FloorSurface, hmdPosition: Vector3 = Vector3(0f, 0f, 0f)) {
         reset()
 
-        val mesh = confettiMesh ?: return
+        val nearMesh = planeMesh ?: return
+        val farMesh = boxMesh ?: return
         val materials = confettiMaterials
 
         // 以 surface 中心为父节点，彩带使用本地坐标，自动继承地面旋转
@@ -117,6 +131,7 @@ object DirtManager {
         val offsetZ = (countZ - 1) * (CONFETTI_DEPTH + CONFETTI_SPACING) / 2f
 
         val random = Random.Default
+        var createdCount = 0
         for (x in 0 until countX) {
             for (z in 0 until countZ) {
                 val colorIndex = random.nextInt(partyColors.size)
@@ -129,6 +144,10 @@ object DirtManager {
                 )
                 // 把本地坐标转成世界坐标，用于后续清洁检测
                 val worldPos = parentPos + parentRot.rotateVector(localPos)
+
+                // 根据与 HMD 的距离选择 LOD mesh
+                val dist = horizontalDistance(worldPos, hmdPosition)
+                val mesh = if (dist < LOD_DISTANCE) nearMesh else farMesh
 
                 val entity = Entity().apply {
                     components.set(ModelComponent(mesh, material))
@@ -144,6 +163,10 @@ object DirtManager {
                 val piece = ConfettiPiece(entity, worldPos, gridKey)
                 confettiPieces.add(piece)
                 confettiGrid.getOrPut(gridKey) { mutableListOf() }.add(piece)
+
+                createdCount++
+                // 每创建 20 片让出一帧，避免启动时一次性创建过多 entity 导致跳帧
+                if (createdCount % 20 == 0) yield()
             }
         }
     }
@@ -205,6 +228,12 @@ object DirtManager {
             kotlin.math.floor(pos.x / GRID_CELL_SIZE).toInt(),
             kotlin.math.floor(pos.z / GRID_CELL_SIZE).toInt(),
         )
+    }
+
+    private fun horizontalDistance(a: Vector3, b: Vector3): Float {
+        val dx = a.x - b.x
+        val dz = a.z - b.z
+        return kotlin.math.sqrt(dx * dx + dz * dz)
     }
 
     private fun horizontalDistanceSq(a: Vector3, b: Vector3): Float {

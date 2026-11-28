@@ -120,9 +120,9 @@ private fun CleanModeStage() {
             content.addEntity(RewardManager.root)
 
             val surface = RoomSurfaceManager.awaitFloor(timeoutMillis = 5000L)
-            DirtManager.spawnDirtGrid(surface)
             HandTrackingManager.start()
             VacuumManager.start()
+            DirtManager.spawnDirtGrid(surface, VacuumManager.currentPosition)
             GameStateManager.setReady(DirtManager.totalCount())
 
             coroutineScope {
