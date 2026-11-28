@@ -12,8 +12,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.pico.spatial.ui.platform.containers.openWindowContainer
 import kotlinx.coroutines.launch
 import com.pico.spatial.ui.design.Button
 import com.pico.spatial.ui.design.PicoTheme
@@ -44,6 +46,7 @@ fun WindowContainerScope.GameHUDWindow() {
     val triangles by PerformanceManager.estimatedTriangles.collectAsState()
     val newUnlocks by AchievementManager.newUnlocks.collectAsState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     PicoTheme {
         Column(
@@ -54,6 +57,15 @@ fun WindowContainerScope.GameHUDWindow() {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(text = "House Hero", fontSize = 48.sp)
+
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Button(onClick = { context.openWindowContainer("Achievements") }) {
+                    Text(text = "成就", fontSize = 20.sp)
+                }
+                Button(onClick = { context.openWindowContainer("Help") }) {
+                    Text(text = "帮助", fontSize = 20.sp)
+                }
+            }
 
             // 模式选择（仅在未扫描/就绪阶段显示）
             if (gameState.phase == GamePhase.Scanning || gameState.phase == GamePhase.Ready) {

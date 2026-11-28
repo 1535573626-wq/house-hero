@@ -1,11 +1,15 @@
 package com.roomhero.app
 
-import com.roomhero.app.content.GameStage
-import com.roomhero.app.ui.GameHUDWindow
+import androidx.compose.ui.unit.dp
 import com.pico.spatial.ui.design.PicoTheme
 import com.pico.spatial.ui.foundation.dsl.SpatialAppScope
 import com.pico.spatial.ui.foundation.dsl.Stage
 import com.pico.spatial.ui.foundation.dsl.WindowContainer
+import com.pico.spatial.ui.foundation.dsl.WindowContainerSize
+import com.roomhero.app.content.GameStage
+import com.roomhero.app.ui.AchievementWindow
+import com.roomhero.app.ui.GameHUDWindow
+import com.roomhero.app.ui.HelpWindow
 
 fun mainApp(scope: SpatialAppScope) =
     with(scope) {
@@ -20,6 +24,26 @@ fun mainApp(scope: SpatialAppScope) =
         WindowContainer(id = "HUD") {
             PicoTheme {
                 GameHUDWindow()
+            }
+        }
+
+        // 成就面板窗口
+        WindowContainer(
+            id = "Achievements",
+            defaultSize = WindowContainerSize(width = 560.dp, height = 720.dp),
+        ) {
+            PicoTheme {
+                AchievementWindow()
+            }
+        }
+
+        // 帮助 / 玩法说明窗口
+        WindowContainer(
+            id = "Help",
+            defaultSize = WindowContainerSize(width = 640.dp, height = 760.dp),
+        ) {
+            PicoTheme {
+                HelpWindow()
             }
         }
     }

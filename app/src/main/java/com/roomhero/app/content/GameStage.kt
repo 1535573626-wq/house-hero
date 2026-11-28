@@ -43,9 +43,11 @@ fun GameStage() {
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
 
-    // Stage 启动后自动打开 HUD 窗口
+    // Stage 启动后自动打开 HUD、成就、帮助三个窗口
     LaunchedEffect(Unit) {
         context.openWindowContainer("HUD")
+        context.openWindowContainer("Achievements")
+        context.openWindowContainer("Help")
     }
 
     DisposableEffect(lifecycleOwner) {

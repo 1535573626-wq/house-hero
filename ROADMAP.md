@@ -17,7 +17,7 @@
 | **Spatial Mesh / Plane Tracking** | 扫描真实地面、桌面，锚定彩带/物品/家具 | ✅ 已用 |
 | **HMD Tracking** | 头部前方固定光标（吸尘器/抓取点） | ✅ 已用 |
 | **Hand Tracking / Gesture** | 捏合右手确认：Ready 开始游戏 / Furniture 抓起时放下 / Finished 重置 | ✅ 已用（Emulator 上报缺权限，功能代码已接入） |
-| **Spatial UI (WindowContainer / PicoTheme)** | 悬浮 HUD、模式选择、计时、分数、结束按钮 | ✅ 已用 |
+| **Spatial UI (WindowContainer / PicoTheme)** | 悬浮 HUD、模式选择、计时、分数、结束按钮；**多窗口：主 HUD + 成就面板 + 帮助面板** | ✅ 已用 |
 | **Spatial Audio** | 清洁成功、放置成功、游戏结束 3D 音效 | ✅ 已用 |
 | **Physics (RigidBody/Collision)** | 早期 Furniture 模式：抓起、释放、重力碰撞 | ✅ 已用；当前自由整理改为 Kinematic 无重力，更贴合“试摆”场景 |
 | **Spatial ML / Sense Mesh** | 整理模式：用 MeshTrackingManager 语义 TABLE 对齐真实桌面；家具模式：**加载真实家具 mesh 生成线框占位模型** | ✅ 真实家具 wireframe 占位已上线 |
@@ -61,6 +61,7 @@
 - [x] TripoClient 占位：无 token 时返回程序化五角星 mesh；token 已注入 `BuildConfig`
 - [x] AchievementManager：本地成就与统计系统，11 个成就（清洁/整理/速度/完美/高分/连续/家具规划等），SharedPreferences 持久化
 - [x] GameHUDWindow 成就解锁提示：游戏结束阶段显示新解锁成就列表，5 秒后自动消失
+- [x] **多窗口 SpatialUI**：`Main.kt` 注册 HUD / Achievements / Help 三个 `WindowContainer`；`GameStage` 启动时全部打开；HUD 内提供「成就」「帮助」按钮重新打开对应窗口
 
 ## 5. 还没做但计划做（优先级排序）
 
@@ -111,9 +112,9 @@
    - 🟡 大房间下的 mesh LOD / 平面管理待补
 
 8. **把官网 Samples 中尚未用到的能力补全**
+   - ✅ **多窗口（Multi-Window）**：主 HUD + 成就面板 + 帮助面板，应用启动时自动打开三个独立 `WindowContainer`
    - **Welcome Space**：做一个游戏开始前的欢迎/大厅空间，或模式选择空间
    - **Spatial Video**：结算或教程阶段播放空间视频
-   - **多窗口（Multi-Window）**：把当前单 HUD 扩展为「主 HUD + 成就面板 + 设置面板」，满足评分维度「这是一款真正的空间应用，多窗口是基本要求」
 
 9. **打包与提交**
    - 生成 release APK
@@ -134,14 +135,10 @@
 
 ### 第一优先级：把「交互体验」15 分的硬性要求补齐
 
-**多窗口是基本要求**。当前只有一个 HUD 窗口，必须扩展：
-1. **主 HUD 窗口**：保留模式选择、计时、分数、性能指标。
-2. **成就面板窗口**：显示已解锁成就列表、累计统计、连续天数（独立悬浮窗）。
-3. **帮助/设置窗口**：玩法说明、音效开关、重置布局按钮。
-
-参考官方资源：
-- [PICO Spatial SDK Sample - Spatial UI](https://github.com/Pico-Developer/PICO-Spatial-SDK-Samples)
-- `pico-cli app install` / `pico-cli app launch` / `pico-cli app watch-crash` 验证流程
+✅ **多窗口已实现**。当前有三个独立 `WindowContainer`：
+1. **主 HUD 窗口**：保留模式选择、计时、分数、性能指标；提供打开成就/帮助窗口的按钮。
+2. **成就面板窗口**：显示所有成就及解锁状态、已解锁数量统计。
+3. **帮助/设置窗口**：三种模式玩法说明、手势交互提示。
 
 ### 第二优先级：补全官网 Samples 中没用到的能力
 

@@ -235,6 +235,14 @@ object AchievementManager {
     }
 
     /**
+     * 返回所有成就及其当前解锁状态。
+     */
+    fun allAchievements(): List<Pair<Achievement, Boolean>> {
+        val stats = buildStats()
+        return Achievement.entries.map { it to it.check(stats) }
+    }
+
+    /**
      * 获取当前所有已解锁成就的 id 集合。
      */
     fun unlockedIds(): Set<String> {
