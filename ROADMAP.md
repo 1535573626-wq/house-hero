@@ -1,7 +1,7 @@
 # House Hero — 项目全景与进度
 
 > 交互备忘：切换对话后快速恢复上下文用。目标、已做、未做、下一步都在这里。  
-> 更新时间：2026-11-27（成就系统已上线）
+> 更新时间：2026-11-28（成就系统 + 性能监控/优化已上线）
 
 ## 1. 一句话创意
 
@@ -53,8 +53,8 @@
 - [x] FurnitureAnchorManager：SharedPreferences + WorldTrackingManager 空间锚点保存/恢复家具布局；快照带 `anchorUUID` + label，跨会话匹配真实家具
 - [x] VacuumManager：HMD 前方光标，跟随头部移动
 - [x] FeedbackManager：空间音效 + 缩放消失动画 + 游戏结束彩带雨粒子
-- [x] PerformanceManager：FPS 与活跃实体数统计，HUD 实时显示
-- [x] DirtManager：派对彩带 + 超大房间自动限制数量（MAX 200）
+- [x] PerformanceManager：FPS / 帧时间 / 活跃实体数 / 估算 DrawCall / 估算三角面，HUD 实时显示
+- [x] DirtManager：派对彩带 + 超大房间自动限制数量（MAX 200）+ 按颜色共享材质 + 二维网格空间分区清洁检测
 - [x] GameStateManager：阶段机（Scanning / Ready / Playing / Finished）+ 计分/倒计时
 - [x] GameHUDWindow：SpatialUI 悬浮面板，显示模式选择、计时、分数、进度
 - [x] RewardManager：游戏结束后按分数生成 1~3 个旋转浮动的 3D 奖杯（本地五角星占位）
@@ -101,10 +101,11 @@
    - 连续打开天数、最快完成时间、最高分数、累计清洁/整理数量、家具布局保存
    - 11 个本地成就徽章，游戏结束阶段自动检测并弹窗展示
 
-7. **性能压榨**
-   - 帧率监控、DrawCall 控制
-   - 大房间下的 mesh LOD / 平面管理
-   - 多线程加载 Tripo 模型不卡主线程
+7. **性能压榨** 🟡 部分完成
+   - ✅ 帧率/帧时间/DrawCall/三角面实时监控
+   - ✅ DirtManager 材质共享 + 空间分区，降低清洁检测复杂度
+   - 🟡 大房间下的 mesh LOD / 平面管理待补
+   - 🟡 多线程加载 Tripo 模型不卡主线程待补
 
 8. **打包与提交**
    - 生成 release APK

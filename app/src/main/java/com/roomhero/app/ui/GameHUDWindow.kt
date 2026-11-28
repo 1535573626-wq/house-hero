@@ -38,7 +38,10 @@ import com.roomhero.app.viewmodel.GameStateManager
 fun WindowContainerScope.GameHUDWindow() {
     val gameState by GameStateManager.gameState.collectAsState()
     val fps by PerformanceManager.fps.collectAsState()
+    val frameTimeMs by PerformanceManager.frameTimeMs.collectAsState()
     val entityCount by PerformanceManager.entityCount.collectAsState()
+    val drawCalls by PerformanceManager.estimatedDrawCalls.collectAsState()
+    val triangles by PerformanceManager.estimatedTriangles.collectAsState()
     val newUnlocks by AchievementManager.newUnlocks.collectAsState()
     val scope = rememberCoroutineScope()
 
@@ -67,7 +70,11 @@ fun WindowContainerScope.GameHUDWindow() {
             AchievementToast(newUnlocks, gameState.phase == GamePhase.Finished)
 
             Text(
-                text = "FPS: $fps | Entities: $entityCount",
+                text = "FPS: $fps | Frame: ${String.format("%.1f", frameTimeMs)}ms | Entities: $entityCount",
+                fontSize = 16.sp,
+            )
+            Text(
+                text = "DrawCalls(估): $drawCalls | Triangles(估): $triangles",
                 fontSize = 16.sp,
             )
         }
