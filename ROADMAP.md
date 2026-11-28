@@ -117,21 +117,25 @@
 
 ## 6. 当前阻塞项
 
-- [ ] **无真机** → 部分 SpatialML / Anchor / 手势功能只能在 Emulator 上有限验证
-- [ ] **Hand Tracking 权限在 Emulator 未生效** → 日志显示 `no com.picovr.permission.HAND_TRACKING permission`，需检查 manifest 与运行时权限
-- [ ] **Android SDK Platform 35 / 37 警告** → AGP 8.13.2 对 SDK 37 支持未测试，已通过 `suppressUnsupportedCompileSdk` 绕过，但后续建议升级 AGP
-- [ ] **Tripo API 尚未真实调用** → v3 接口已接；当前开发环境无法直连 `openapi.tripo3d.ai`，需在真机或能访问该域名的网络下验证
+- [ ] **无真机** → 当前全部验证在 PICO Emulator 完成；手部追踪、SpatialML 真实物体识别、Tripo 真实 API 调用、真机性能数据都需在真机上确认
+- [x] **Hand Tracking 权限在 Emulator 未生效** → 已确认是 Emulator 系统限制，真机 manifest 权限已声明，需真机验证
+- [x] **Android SDK Platform 35 / 37 警告** → 已通过 `android.suppressUnsupportedCompileSdk=37.0` 绕过，不影响运行
+- [ ] **Tripo API 尚未真实调用** → v3 接口已接、并发加载/缓存/loading 占位已做；当前开发环境无法直连 `openapi.tripo3d.ai`，需在真机或能访问该域名的网络下验证
 
 ## 7. 下一步（建议）
 
-按“先让 Demo 在 Emulator 跑通，再堆高级功能”的顺序：
+### 如果拿到真机
+1. 真机运行三模式基础流程，确认无崩溃。
+2. 验证 Hand Tracking 权限自动授予，HUD 捏合点击可用。
+3. Phase 1 联调 Tripo 真实奖杯生成（~25 积分）。
+4. 验证整理模式真实物体 mesh 识别效果。
+5. 真机性能测试，根据 FPS/帧时间决定是否进一步压 LOD。
 
-1. ✅ 自由整理占位模型已上线；继续视觉升级（ghost 填充 + 标签 + 悬停动画）。
-2. 修复 Hand Tracking 权限，让 Emulator 上也能手势点击 HUD。
-3. 整理模式接入真实物体 mesh / Tripo 容器模型原型。
-4. Phase 1 联调 Tripo 真实奖杯生成（~25 积分）。
-5. 加粒子/彩带雨等视觉反馈，让“游戏感”更强。
-6. 最后做性能调优与提交材料。
+### 如果没有真机
+1. 继续打磨 Emulator 可验证体验：粒子、音效、UI 动效。
+2. 预置 Tripo 模型到 `assets/tripo/`（如果无法实时调用 API）。
+3. 录制 Emulator 演示视频。
+4. 生成 release APK 并补齐提交材料。
 
 ## 8. 仓库与运行命令
 
