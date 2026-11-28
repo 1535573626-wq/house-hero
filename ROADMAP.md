@@ -127,20 +127,68 @@
 - [x] **Android SDK Platform 35 / 37 警告** → 已通过 `android.suppressUnsupportedCompileSdk=37.0` 绕过，不影响运行
 - [ ] **Tripo API 尚未真实调用** → v3 接口已接、并发加载/缓存/loading 占位已做；当前开发环境无法直连 `openapi.tripo3d.ai`，需在真机或能访问该域名的网络下验证
 
-## 7. 下一步（建议）
+## 7. 下一步（基于比赛评分标准与官方资源）
 
-### 如果拿到真机
+> 比赛评分六大维度：创新 25、功能设计 25、界面视觉 15、交互体验 15、完成度 10、路演表现 10。  
+> 当前无真机，优先做 **Emulator 可验证且能直接加分** 的事。
+
+### 第一优先级：把「交互体验」15 分的硬性要求补齐
+
+**多窗口是基本要求**。当前只有一个 HUD 窗口，必须扩展：
+1. **主 HUD 窗口**：保留模式选择、计时、分数、性能指标。
+2. **成就面板窗口**：显示已解锁成就列表、累计统计、连续天数（独立悬浮窗）。
+3. **帮助/设置窗口**：玩法说明、音效开关、重置布局按钮。
+
+参考官方资源：
+- [PICO Spatial SDK Sample - Spatial UI](https://github.com/Pico-Developer/PICO-Spatial-SDK-Samples)
+- `pico-cli app install` / `pico-cli app launch` / `pico-cli app watch-crash` 验证流程
+
+### 第二优先级：补全官网 Samples 中没用到的能力
+
+对应官网 9 个 Samples 方向：
+- **Welcome Space**：做一个游戏开始前的欢迎/大厅空间（可用 Spatial Editor 创作，也可代码写）。
+- **Spatial Video**：在欢迎界面或结算界面播放空间视频（教程/奖励动画）。
+- **Sample Pages** 综合展示：把多窗口、动画、物理、粒子、音频整合成一个完整体验。
+
+参考官方资源：
+- [PICO Spatial SDK Samples](https://github.com/Pico-Developer/PICO-Spatial-SDK-Samples)
+- [Create and package scenes using PICO Spatial Editor](https://developer.picoxr.com/document/spatial-editor/create-package-scenes/)
+
+### 第三优先级：提升「界面视觉」15 分
+
+- 统一 HUD 视觉风格：颜色主题、圆角、字体层级、动效。
+- 三种模式用不同主题色区分（清洁=暖色、整理=冷色、家具=自然色）。
+- 增加过渡动画：模式切换、游戏开始/结束、成就弹出。
+
+### 第四优先级：提升「完成度」10 分（开源友好）
+
+- 完善 README 架构说明，让其他开发者能二次开发。
+- 加 `CONTRIBUTING.md` 或 `ARCHITECTURE.md`。
+- 确保代码模块化、命名清晰。
+
+### 第五优先级：Tripo 真实模型落地（功能设计/创新加分）
+
+- 如果有真机或能联网：Phase 1 联调 Tripo 奖杯生成（~25 积分）。
+- 如果无真机：预置程序化模型或先用少量积分在其他机器生成 GLB，放入 `assets/tripo/`。
+
+参考官方资源：
+- [Tripo 中文文档](https://developers.tripo3d.ai/zh)
+- `TRIPO_TOKEN_PLAN.md`
+
+### 第六优先级：演示视频与提交材料（路演表现 10 分）
+
+- 使用 `pico-cli capture screenshot` 或 Emulator 自带录屏录制演示视频。
+- 准备 1 分钟介绍视频 + 几张关键截图。
+- 生成 release APK。
+
+---
+
+### 如果拿到真机（额外）
 1. 真机运行三模式基础流程，确认无崩溃。
 2. 验证 Hand Tracking 权限自动授予，HUD 捏合点击可用。
 3. Phase 1 联调 Tripo 真实奖杯生成（~25 积分）。
 4. 验证整理模式真实物体 mesh 识别效果。
-5. 真机性能测试，根据 FPS/帧时间决定是否进一步压 LOD。
-
-### 如果没有真机
-1. 继续打磨 Emulator 可验证体验：粒子、音效、UI 动效。
-2. 预置 Tripo 模型到 `assets/tripo/`（如果无法实时调用 API）。
-3. 录制 Emulator 演示视频。
-4. 生成 release APK 并补齐提交材料。
+5. 使用 PICO Spatial Profiler 做真机性能测试。
 
 ## 8. 仓库与运行命令
 
