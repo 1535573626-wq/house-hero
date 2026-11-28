@@ -17,17 +17,25 @@
 
 ## 已集成的 PICO Spatial SDK 能力
 
-- [x] **Spatial Mesh / Plane Tracking** — 扫描地面、桌面
-- [x] **HMD Tracking** — 头部前方光标
-- [x] **Hand Tracking / Gesture** — 捏合确认（开始/放下家具/重置）
-- [x] **Spatial UI** — HUD 面板、模式选择
-- [x] **Spatial Audio** — 3D 音效反馈
-- [x] **Physics** — RigidBody/Collision 家具物理
-- [x] **Spatial ML / Sense Mesh** — 真实家具语义识别（TABLE/CABINET/SOFA/BED/CHAIR 等）+ 桌面真实物体识别
-- [x] **Spatial Anchor** — 家具布局持久化
-- [x] **Particle Component** — 游戏结束彩带雨
-- [x] **Animation** — 奖励旋转浮动、成功缩放动画
-- [x] **Tripo 3D 生成** — 游戏结束后 AI 生成 3D 奖励模型（v3 API，本地缓存，并发加载）
+> 对应官网 PICO Spatial SDK Samples 的 9 个方向，力求把 SDK 提供的核心能力都用到作品中。
+
+| 能力方向 | 当前用法 | 状态 |
+|---|---|---|
+| **Spatial Mesh** | 扫描真实地面、桌面、家具 mesh；清洁/整理/摆家具均依赖空间网格 | ✅ 已用 |
+| **Plane Tracking** | 检测 FLOOR / TABLE 平面，作为游戏表面 | ✅ 已用 |
+| **Spatial ML / Sense Mesh** | 真实家具语义识别（TABLE/CABINET/SOFA/BED/CHAIR 等）+ 桌面真实物体识别 | ✅ 已用 |
+| **Spatial UI** | HUD 面板、模式选择、计时、分数、性能指标 | ✅ 已用 |
+| **HMD Tracking** | 头部前方吸尘器/抓取光标 | ✅ 已用 |
+| **Hand Tracking / Gesture** | 捏合右手确认开始/放下家具/重置（代码已接入，Emulator 缺权限，需真机验证） | 🟡 已接待验证 |
+| **Spatial Audio** | 清洁/整理/游戏结束 3D 音效 | ✅ 已用 |
+| **Physics** | 家具物理碰撞检测与警告 | ✅ 已用 |
+| **Animation** | 奖励旋转浮动、成功缩放脉冲 | ✅ 已用 |
+| **Particle Component** | 游戏结束彩带雨、成功闪光点 | ✅ 已用 |
+| **Spatial Anchor** | 家具布局持久化 | ✅ 已用 |
+| **Tripo 3D 生成** | 游戏结束后 AI 生成 3D 奖励模型（v3 API，本地缓存，并发加载） | ✅ 已接待验证 |
+| **Welcome Space** | 暂未接入，可作为后续「游戏大厅/欢迎空间」 | 🟡 待接入 |
+| **Spatial Video** | 暂未接入，可作为后续「教程/结算视频」或「奖励展示」 | 🟡 待接入 |
+| **多窗口（Multi-Window）** | 当前仅一个 HUD 窗口；可扩展为「主 HUD + 成就面板 + 设置面板」 | 🟡 待接入 |
 
 ## 性能优化亮点
 
@@ -76,7 +84,8 @@ app/src/main/java/com/roomhero/app/
 
 ## 待完成 / 阻塞项
 
-- [ ] **真机验证** — 当前只有 PICO Emulator，手部追踪权限、SpatialML 真实物体识别、Tripo 真实 API 调用需在真机上确认
+- [ ] **真机验证** — 当前只有 PICO Emulator，手部追踪权限、SpatialML 真实物体识别、Tripo 真实 API 调用需在真机上确认。比赛入围后可申请北京/上海/广州字节工区线下真机调试。
+- [ ] **Welcome Space / Spatial Video / 多窗口** — 对应官网 PICO Spatial SDK Samples 中尚未用到的能力，计划作为下一轮扩展。
 - [ ] **性能最终调优** — 已做第一轮/第二轮性能压榨，真机后再根据 FPS/帧时间进一步压 LOD/DrawCall
 
 ## 开发环境
