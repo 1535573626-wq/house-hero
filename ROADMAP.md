@@ -1,7 +1,7 @@
 # House Hero — 项目全景与进度
 
 > 交互备忘：切换对话后快速恢复上下文用。目标、已做、未做、下一步都在这里。  
-> 更新时间：2026-11-28（成就系统 + 性能监控/优化已上线）
+> 更新时间：2026-11-28（成就系统 + 性能优化 + 整理真实物体 mesh 已上线）
 
 ## 1. 一句话创意
 
@@ -48,7 +48,7 @@
 - [x] 三种模式切换：清洁 / 整理 / 自由整理（摆家具）
 - [x] RoomSurfaceManager：启动 PlaneTracking + MeshTracking，等待地面/桌面/真实家具 mesh，fallback 虚拟表面
 - [x] DirtManager：在地面上生成彩色派对彩带，HMD 光标靠近清除
-- [x] OrganizeManager：桌面生成物品+虚线目标框，优先对齐真实 TABLE mesh，模拟 SpatialML 物品标签
+- [x] OrganizeManager：优先扫描真实桌面上小物体 mesh，加载真实 mesh 作为待整理物品；未扫描到时回退预设方块；按物体尺寸智能推断收纳类别
 - [x] **FurnitureManager 升级**：从 `RoomSurfaceManager` 读取真实家具 mesh，按语义生成彩色线框占位模型；可拖动试摆新布局；放下后保持位置不坠落
 - [x] FurnitureAnchorManager：SharedPreferences + WorldTrackingManager 空间锚点保存/恢复家具布局；快照带 `anchorUUID` + label，跨会话匹配真实家具
 - [x] VacuumManager：HMD 前方光标，跟随头部移动
@@ -71,9 +71,9 @@
    - 每个占位模型顶部加语义颜色标记小球
    - 拖动时放大+高亮，放下后恢复
 
-2. **整理模式目标收纳容器** ✅ 本地版已完成
+2. **整理模式目标收纳容器** ✅
    - 每个物品对应一个目标收纳容器虚线框：Book→书架、Cup→杯托、Charger→长条盒、Toy→玩具箱
-   - 每个容器顶部有语义颜色标记小球
+   - 已支持真实扫描物体作为待整理物品，按包围盒尺寸自动推断类别
    - 后续拿到 Tripo token 后，可把 wireframe 框替换为真实 AI 生成的 3D 容器模型
 
 3. **手势交互真正可用**

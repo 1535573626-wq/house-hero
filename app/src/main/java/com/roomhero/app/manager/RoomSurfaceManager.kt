@@ -133,6 +133,11 @@ object RoomSurfaceManager {
         furnitureMeshes.values.filter { type in it.semantics }
 
     /**
+     * 获取当前已缓存的所有空间网格（含家具、物体、未知语义等）。
+     */
+    fun getAllFurnitureMeshes(): List<MeshAnchor> = furnitureMeshes.values.toList()
+
+    /**
      * 等待检测到指定语义的真实家具网格，[timeoutMillis] 内未检测到则返回 null。
      */
     suspend fun awaitFurnitureMesh(

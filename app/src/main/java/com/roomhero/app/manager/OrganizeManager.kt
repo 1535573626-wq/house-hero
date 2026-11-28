@@ -11,6 +11,8 @@ import com.pico.spatial.core.math.Quat
 import com.pico.spatial.core.math.Vector2
 import com.pico.spatial.core.math.Vector3
 import com.pico.spatial.sense.base.SemanticLabelType
+import com.pico.spatial.sense.mesh.MeshAnchor
+import java.util.UUID
 
 private const val ITEM_SIZE = 0.10f
 private const val GRAB_RADIUS = 0.15f
@@ -18,6 +20,12 @@ private const val PLACE_RADIUS = 0.12f
 private const val ITEM_HEIGHT_OFFSET = 0.01f
 private const val TAG_RADIUS = 0.025f
 private const val TAG_OFFSET_Y = 0.04f
+
+// 真实物体检测参数
+private const val MAX_OBJECT_VOLUME = 0.08f        // 排除沙发等大件
+private const val MAX_OBJECT_HEIGHT = 0.40f        // 排除显示器等高物
+private const val TABLE_MARGIN = 0.15f             // 桌面边缘留白
+private const val MIN_OBJECT_VOLUME = 0.0005f      // 过滤噪声小点
 
 /**
  * 整理模式里的物品种类与对应目标收纳容器规格。
@@ -60,6 +68,21 @@ private data class ContainerSpec(
 )
 
 /**
+ * 检测到的真实桌面物体。
+ *
+ * @param anchorUUID 空间网格锚点 UUID
+ * @param label 推断的收纳类别
+ * @param color 物品展示颜色
+ * @param meshAnchor 原始扫描 mesh 数据
+ */
+private data class DetectedObject(
+    val anchorUUID: UUID,
+    val label: String,
+    val color: Color4,
+    val meshAnchor: MeshAnchor,
+)
+
+/**
  * 单个待整理物品。
  *
  * @param id 唯一编号
@@ -82,6 +105,7 @@ data class OrganizeItem(
  * 整理模式管理器。
  *
  * 在检测到的桌面（或 fallback 虚拟桌面）上生成若干待整理物品与对应目标收纳容器虚线框。
+ * 优先使用真实扫描到的桌面物体 mesh 作为待整理物品；未扫描到时回退到预设方块物品。
  * 用户通过移动 HMD/吸尘器光标把物品拖入对应容器完成整理。
  */
 object OrganizeManager {
@@ -97,13 +121,14 @@ object OrganizeManager {
     /**
      * 在 [surface] 上生成物品与目标容器。
      *
-     * 若 RoomSurfaceManager 已扫描到真实 TABLE mesh，会自动对齐到真实桌面的
-     * 中心位置与包围盒，让整理游戏发生在真实家具上。
+     * 流程：
+     * 1. 优先使用真实 TABLE mesh 的包围盒对齐桌面
+     * 2. 尝试扫描桌面上的真实物体 mesh
+     * 3. 检测到真实物体则用其真实 mesh 作为待整理物品
+     * 4. 未检测到则回退到 4 个预设物品方块
      */
     fun spawnItems(surface: FloorSurface) {
         reset()
-
-        val mesh = itemMesh ?: return
 
         // 优先使用真实 TABLE mesh 的包围盒，否则回退平面检测尺寸
         val tableMesh = RoomSurfaceManager.getFurnitureMeshes(SemanticLabelType.TABLE)
@@ -129,8 +154,157 @@ object OrganizeManager {
         tableParent = parent
         root.addChild(parent)
 
-        val halfW = (effectiveSurface.bounds.x / 2f) - 0.25f
-        val halfD = (effectiveSurface.bounds.y / 2f) - 0.25f
+        // 检测真实桌面物体
+        val detectedObjects = detectTabletopObjects(effectiveSurface)
+        if (detectedObjects.isNotEmpty()) {
+            spawnRealObjectItems(detectedObjects, effectiveSurface, parent)
+        } else {
+            spawnFallbackItems(effectiveSurface, parent)
+        }
+    }
+
+    /**
+     * 从所有扫描到的空间网格中，找出放在桌面上的真实小物体。
+     */
+    private fun detectTabletopObjects(table: FloorSurface): List<DetectedObject> {
+        val tableY = table.position.y
+        val halfW = table.bounds.x / 2f - TABLE_MARGIN
+        val halfD = table.bounds.y / 2f - TABLE_MARGIN
+        val minX = table.position.x - halfW
+        val maxX = table.position.x + halfW
+        val minZ = table.position.z - halfD
+        val maxZ = table.position.z + halfD
+
+        return RoomSurfaceManager.getAllFurnitureMeshes()
+            .filter { mesh ->
+                // 排除桌面本身和大件家具
+                SemanticLabelType.TABLE !in mesh.semantics &&
+                    mesh.boundingBoxSize.x * mesh.boundingBoxSize.y * mesh.boundingBoxSize.z in MIN_OBJECT_VOLUME..MAX_OBJECT_VOLUME &&
+                    mesh.boundingBoxSize.y <= MAX_OBJECT_HEIGHT
+            }
+            .filter { mesh ->
+                // 物体底部在桌面上方附近，且中心在桌面范围内
+                val bottomY = mesh.transform.position.y - mesh.boundingBoxSize.y / 2f
+                val centerX = mesh.transform.position.x
+                val centerZ = mesh.transform.position.z
+                bottomY in (tableY - 0.05f)..(tableY + 0.10f) &&
+                    centerX in minX..maxX &&
+                    centerZ in minZ..maxZ
+            }
+            .take(4) // 同屏最多 4 个真实物体，避免拥挤
+            .mapIndexed { index, mesh ->
+                val label = guessLabel(mesh.boundingBoxSize)
+                val color = CONTAINER_SPECS.find { it.label == label }?.itemColor
+                    ?: CONTAINER_SPECS[index % CONTAINER_SPECS.size].itemColor
+                DetectedObject(
+                    anchorUUID = mesh.anchorUUID,
+                    label = label,
+                    color = color,
+                    meshAnchor = mesh,
+                )
+            }
+    }
+
+    /**
+     * 根据包围盒尺寸推断收纳类别。
+     */
+    private fun guessLabel(size: Vector3): String {
+        val sorted = listOf(size.x, size.y, size.z).sorted()
+        val min = sorted[0]
+        val mid = sorted[1]
+        val max = sorted[2]
+
+        return when {
+            // 扁平且较大 → 书
+            max >= 0.18f && mid >= 0.12f && size.y <= 0.08f -> "Book"
+            // 长条形 → 充电器/数据线
+            max >= 0.12f && min <= 0.04f -> "Charger"
+            // 近似立方体且较小 → 杯子
+            max in 0.05f..0.14f && mid in 0.05f..0.14f -> "Cup"
+            // 其他 → 玩具/杂物
+            else -> "Toy"
+        }
+    }
+
+    /**
+     * 使用真实扫描物体生成整理游戏。
+     */
+    private fun spawnRealObjectItems(
+        objects: List<DetectedObject>,
+        table: FloorSurface,
+        parent: Entity,
+    ) {
+        val halfW = (table.bounds.x / 2f) - 0.25f
+        val halfD = (table.bounds.y / 2f) - 0.25f
+
+        // 物品摆在左侧，目标容器摆在右侧
+        val itemX = -halfW * 0.55f
+        val targetX = halfW * 0.55f
+        val spacingZ = (halfD * 1.8f) / (objects.size - 1).coerceAtLeast(1)
+
+        objects.forEachIndexed { index, obj ->
+            val z = -halfD * 0.8f + index * spacingZ
+            val spec = CONTAINER_SPECS.find { it.label == obj.label } ?: CONTAINER_SPECS[index % CONTAINER_SPECS.size]
+
+            // 真实物体占位模型：优先加载扫描 mesh，失败则用包围盒线框
+            val mesh = try {
+                MeshResource.loadFromMeshAnchor(obj.anchorUUID)
+            } catch (_: Exception) {
+                MeshResource.createBox(obj.meshAnchor.boundingBoxSize, 0.01f)
+            } ?: return@forEachIndexed
+
+            val itemMaterial = createItemMaterial(obj.color)
+            val itemEntity = Entity().apply {
+                components.set(ModelComponent(mesh, itemMaterial))
+            }
+            itemEntity.components[TransformComponent::class.java]?.apply {
+                position = Vector3(itemX, ITEM_HEIGHT_OFFSET + obj.meshAnchor.boundingBoxSize.y / 2f, z)
+                quaternion = Quat()
+            }
+            parent.addChild(itemEntity)
+
+            // 目标容器
+            val targetMesh = MeshResource.createBox(spec.size, 0.01f) ?: return@forEachIndexed
+            val targetEntity = Entity().apply {
+                components.set(ModelComponent(targetMesh, createWireframeMaterial(spec.containerColor)))
+            }
+            targetEntity.components[TransformComponent::class.java]?.apply {
+                position = Vector3(targetX, ITEM_HEIGHT_OFFSET + spec.size.y / 2f, z)
+                quaternion = Quat()
+            }
+            parent.addChild(targetEntity)
+
+            // 容器顶部标签小球
+            val tagEntity = createTag(spec)
+            tagEntity.components[TransformComponent::class.java]?.position = Vector3(
+                targetX,
+                ITEM_HEIGHT_OFFSET + spec.size.y / 2f + TAG_RADIUS + TAG_OFFSET_Y,
+                z,
+            )
+            parent.addChild(tagEntity)
+
+            items.add(
+                OrganizeItem(
+                    id = index,
+                    label = spec.label,
+                    color = obj.color,
+                    currentEntity = itemEntity,
+                    targetEntity = targetEntity,
+                )
+            )
+        }
+    }
+
+    /**
+     * 无真实物体扫描结果时的回退方案：4 个预设方块物品。
+     */
+    private fun spawnFallbackItems(
+        table: FloorSurface,
+        parent: Entity,
+    ) {
+        val mesh = itemMesh ?: return
+        val halfW = (table.bounds.x / 2f) - 0.25f
+        val halfD = (table.bounds.y / 2f) - 0.25f
         val spacingZ = (halfD * 1.8f) / (CONTAINER_SPECS.size - 1).coerceAtLeast(1)
 
         CONTAINER_SPECS.forEachIndexed { index, spec ->
@@ -139,7 +313,6 @@ object OrganizeManager {
             val startX = -halfW * 0.55f
             val targetX = halfW * 0.55f
 
-            // 当前物品：用小方块代表桌上真实物体
             val itemEntity = Entity().apply {
                 components.set(ModelComponent(mesh, createItemMaterial(spec.itemColor)))
             }
@@ -149,7 +322,6 @@ object OrganizeManager {
             }
             parent.addChild(itemEntity)
 
-            // 目标容器：用对应类别的 wireframe 框表示
             val targetMesh = MeshResource.createBox(spec.size, 0.01f) ?: return@forEachIndexed
             val targetEntity = Entity().apply {
                 components.set(ModelComponent(targetMesh, createWireframeMaterial(spec.containerColor)))
@@ -160,7 +332,6 @@ object OrganizeManager {
             }
             parent.addChild(targetEntity)
 
-            // 容器顶部加标签小球
             val tagEntity = createTag(spec)
             tagEntity.components[TransformComponent::class.java]?.position = Vector3(
                 targetX,
